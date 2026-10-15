@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, type OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
-import { forkJoin, type Observable } from 'rxjs';
+import { forkJoin, type Observable, type Subscription } from 'rxjs';
 import { finalize, map } from 'rxjs/operators';
 import { toApiError } from '../../core/api-error';
 import { withoutTodayCheckIn } from '../../core/habit-updates';
@@ -34,17 +34,18 @@ import { buildMonthGrid } from './month-grid';
     .stat dt { font-size: var(--text-sm); color: var(--color-muted); }
     .stat dd { margin: var(--space-1) 0 0; font-size: 2rem; font-weight: 700; }
     .calendar { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
-    .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--space-1); }
-    .weekday { text-align: center; font-size: var(--text-xs); color: var(--color-muted); font-weight: 600; }
+    .grid { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: var(--space-1); }
+    .grid th { font-size: var(--text-xs); color: var(--color-muted); font-weight: 600; }
+    .grid td { padding: 0; }
     .day { aspect-ratio: 1; display: grid; place-items: center; border-radius: var(--radius-sm); font-size: var(--text-sm); background: var(--color-bg); }
     .day.checked { background: var(--color-success); color: #fff; font-weight: 700; }
     .day.today { box-shadow: inset 0 0 0 2px var(--color-primary); }
-    .day.future { color: #b3bacb; background: transparent; }
+    .day.future { color: var(--color-muted); background: transparent; }
     @media (max-width: 600px) { .stat dd { font-size: 1.5rem; } .header, .calendar { padding: var(--space-4); } }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HabitDetailsPage implements OnInit {
+export class HabitDetailsPage {
   readonly id = input.required<string>();
 
   private readonly api = inject(HabitsApi);
@@ -60,7 +61,8 @@ export class HabitDetailsPage implements OnInit {
   protected readonly editing = signal(false);
   protected readonly confirmingDelete = signal(false);
   protected readonly statusLabels = STATUS_LABELS;
-  protected readonly weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  protected readonly weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((full) => ({ full, short: full.slice(0, 3) }));
+  private loadSubscription: Subscription | null = null;
   protected readonly today = computed(() => this.month()?.today ?? localToday());
 
   protected readonly weeks = computed(() => {
@@ -73,14 +75,22 @@ export class HabitDetailsPage implements OnInit {
     return month ? new Date(`${month}-01T00:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
   });
 
-  ngOnInit(): void {
-    this.load();
+  constructor() {
+    effect(() => {
+      this.id();
+      untracked(() => {
+        this.habit.set(null);
+        this.month.set(null);
+        this.load();
+      });
+    });
   }
 
   protected load(): void {
     this.loading.set(true);
     this.error.set(null);
-    forkJoin({ habit: this.api.get(this.id()), month: this.api.month(this.id()) })
+    this.loadSubscription?.unsubscribe();
+    this.loadSubscription = forkJoin({ habit: this.api.get(this.id()), month: this.api.month(this.id()) })
       .pipe(
         finalize(() => {
           this.loading.set(false);
@@ -142,7 +152,7 @@ export class HabitDetailsPage implements OnInit {
   private mutate(request: Observable<Habit>): void {
     // load() clears busy when the reload settles, so a second click cannot race it.
     this.busy.set(true);
-    request.subscribe({
+    request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (habit) => this.apply(habit),
       complete: () => this.load(),
       error: (err: unknown) => {

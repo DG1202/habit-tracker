@@ -119,6 +119,38 @@ describe('HabitDetailsPage', () => {
     expect(button('Check in for today')).toBeUndefined();
   });
 
+  it('renders the month as a table with weekday headers and readable day labels', async () => {
+    await flushLoad(HABIT);
+    const table = root().querySelector('table')!;
+    expect(Array.from(table.querySelectorAll('thead th[scope="col"]')).map((th) => th.getAttribute('abbr'))).toEqual([
+      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+    ]);
+    expect(table.querySelectorAll('tbody tr')).toHaveLength(5);
+    const labels = Array.from(table.querySelectorAll('tbody td .visually-hidden')).map((el) => el.textContent!.trim());
+    expect(labels).toContain('October 14, checked in');
+    expect(labels).toContain('October 15, today');
+    expect(labels).toContain('October 16, future');
+  });
+
+  it('loads the new habit when the id input changes', async () => {
+    await flushLoad(HABIT);
+    fixture.componentRef.setInput('id', 'h2');
+    await fixture.whenStable();
+    http.expectOne('/api/habits/h2').flush({ ...HABIT, id: 'h2', name: 'Walk 5,000 steps' });
+    http.expectOne('/api/habits/h2/check-ins').flush(MONTH);
+    await fixture.whenStable();
+    expect(root().querySelector('h1')!.textContent).toBe('Walk 5,000 steps');
+  });
+
+  it('cancels a pending action when the page is destroyed', async () => {
+    await flushLoad(HABIT);
+    button('Check in for today').click();
+    await fixture.whenStable();
+    const req = http.expectOne((r) => r.url === '/api/habits/h1/check-ins' && r.method === 'POST');
+    fixture.destroy();
+    expect(req.cancelled).toBe(true);
+  });
+
   describe('status actions', () => {
     const labels = () => Array.from(root().querySelectorAll('ht-habit-actions button')).map((b) => b.textContent!.trim());
     const PAUSED: Habit = { ...HABIT, status: 'PAUSED' };

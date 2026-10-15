@@ -49,21 +49,31 @@
     } @else {
       <section class="card calendar" aria-labelledby="calendar-title">
         <h2 id="calendar-title">{{ monthLabel() }}</h2>
-        <div class="grid" role="grid">
-          @for (weekday of weekdays; track weekday) {
-            <div class="weekday" role="columnheader">{{ weekday }}</div>
-          }
-          @for (week of weeks(); track $index) {
-            @for (cell of week; track $index) {
-              @if (cell) {
-                <div class="day" role="gridcell" [class.checked]="cell.checked" [class.today]="cell.isToday" [class.future]="cell.isFuture"
-                     [attr.aria-label]="cell.date + (cell.checked ? ', checked in' : '')">{{ cell.day }}</div>
-              } @else {
-                <div role="gridcell" aria-hidden="true"></div>
+        <table class="grid" aria-labelledby="calendar-title">
+          <thead>
+            <tr>
+              @for (weekday of weekdays; track weekday.short) {
+                <th scope="col" [attr.abbr]="weekday.full">{{ weekday.short }}</th>
               }
+            </tr>
+          </thead>
+          <tbody>
+            @for (week of weeks(); track $index) {
+              <tr>
+                @for (cell of week; track $index) {
+                  <td>
+                    @if (cell) {
+                      <div class="day" [class.checked]="cell.checked" [class.today]="cell.isToday" [class.future]="cell.isFuture">
+                        <span aria-hidden="true">{{ cell.day }}</span>
+                        <span class="visually-hidden">{{ cell.label }}</span>
+                      </div>
+                    }
+                  </td>
+                }
+              </tr>
             }
-          }
-        </div>
+          </tbody>
+        </table>
         @if (month()?.dates?.length === 0) {
           <p class="muted meta">No check-ins this month yet.</p>
         }
