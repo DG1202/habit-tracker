@@ -6,6 +6,7 @@ import {
   DestroyRef,
   ElementRef,
   inject,
+  Injector,
   input,
   type OnInit,
   output,
@@ -52,6 +53,8 @@ export class HabitFormDialog implements OnInit {
 
   private readonly api = inject(HabitsApi);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
   protected readonly isEdit = computed(() => this.habit() !== null);
@@ -87,7 +90,11 @@ export class HabitFormDialog implements OnInit {
   protected submit(): void {
     this.submitted.set(true);
     this.form.markAllAsTouched();
-    if (this.form.invalid || this.saving()) return;
+    if (this.form.invalid) {
+      afterNextRender(() => this.host.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(), { injector: this.injector });
+      return;
+    }
+    if (this.saving()) return;
 
     const raw = this.form.getRawValue();
     const value = { name: raw.name.trim(), description: raw.description.trim(), startDate: raw.startDate };

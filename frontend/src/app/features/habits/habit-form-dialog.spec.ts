@@ -116,6 +116,51 @@ describe('HabitFormDialog', () => {
     expect(api.create).not.toHaveBeenCalled();
   });
 
+  it('names each field by its label only and links the hint and error through aria-describedby', async () => {
+    await render();
+    const fields = [
+      ['input[formcontrolname="name"]', 'Name'],
+      ['textarea[formcontrolname="description"]', 'Description'],
+      ['input[formcontrolname="startDate"]', 'Start date'],
+    ] as const;
+    for (const [selector, label] of fields) {
+      const control = el().querySelector<HTMLElement>(selector)!;
+      expect(control.closest('label')).toBeNull();
+      expect(el().querySelector(`label[for="${control.id}"]`)!.textContent!.trim()).toBe(label);
+    }
+
+    const description = el().querySelector<HTMLTextAreaElement>('textarea[formcontrolname="description"]')!;
+    expect(description.getAttribute('aria-describedby')).toBe('description-hint');
+    expect(el().querySelector('#description-hint')!.textContent).toBe('0/500');
+
+    type('textarea[formcontrolname="description"]', 'y'.repeat(501));
+    type('input[formcontrolname="startDate"]', '');
+    await submit();
+    expect(description.getAttribute('aria-describedby')).toBe('description-hint description-error');
+    const startDate = el().querySelector<HTMLInputElement>('input[formcontrolname="startDate"]')!;
+    expect(el().querySelector(`#${startDate.getAttribute('aria-describedby')}`)!.textContent).toBe('Start date is required');
+  });
+
+  it('moves focus to the first invalid field on submit', async () => {
+    await render();
+    document.body.appendChild(fixture.nativeElement);
+    // jsdom has no showModal(), so open the dialog by hand to make its controls focusable.
+    el().querySelector('dialog')!.setAttribute('open', '');
+    try {
+      el().querySelector<HTMLButtonElement>('button[type="submit"]')!.focus();
+      await submit();
+      expect(document.activeElement).toBe(el().querySelector('input[formcontrolname="name"]'));
+
+      type('input[formcontrolname="name"]', 'Read');
+      type('textarea[formcontrolname="description"]', 'y'.repeat(501));
+      el().querySelector<HTMLButtonElement>('button[type="submit"]')!.focus();
+      await submit();
+      expect(document.activeElement).toBe(el().querySelector('textarea[formcontrolname="description"]'));
+    } finally {
+      fixture.nativeElement.remove();
+    }
+  });
+
   it('cannot be closed while saving', async () => {
     await render();
     const pending = new Subject<Habit>();
