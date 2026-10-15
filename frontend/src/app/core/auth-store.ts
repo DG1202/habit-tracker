@@ -3,11 +3,13 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import type { User } from './models';
+import { ToastService } from './toast-service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+  private readonly toasts = inject(ToastService);
   private readonly state = signal<User | null | undefined>(undefined);
   private readonly blockedUrl = signal<string | null>(null);
   private pending: Promise<User | null | undefined> | null = null;
@@ -43,7 +45,14 @@ export class AuthStore {
       this.state.set(null);
       void this.router.navigate(['/login']);
     };
-    this.http.post('/api/auth/logout', {}).subscribe({ complete: done, error: done });
+    this.http.post('/api/auth/logout', {}).subscribe({
+      complete: done,
+      error: (err: unknown) => {
+        // 401 means the session is already gone; any other failure may leave it valid on the server.
+        if (err instanceof HttpErrorResponse && err.status === 401) done();
+        else this.toasts.error("Couldn't sign out. Try again.");
+      },
+    });
   }
 
   private async load(): Promise<User | null | undefined> {

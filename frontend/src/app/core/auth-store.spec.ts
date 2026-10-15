@@ -1,10 +1,11 @@
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting, type TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { vi } from 'vitest';
 import { AuthStore } from './auth-store';
 import type { User } from './models';
+import { ToastService } from './toast-service';
 
 const USER: User = { id: 'u1', provider: 'github', email: null, displayName: 'Alice Test', avatarUrl: null, timezone: 'UTC' };
 
@@ -110,14 +111,33 @@ describe('AuthStore', () => {
     expect(await result).toEqual(USER);
   });
 
-  it('signs out locally and goes to /login even when the logout request fails', async () => {
+  async function signIn() {
     const loaded = auth.ensureLoaded();
     flushMe(USER);
     await loaded;
+  }
 
+  it.each([
+    ['a 2xx', 204, 'No Content'],
+    ['a 401 (the session is already gone)', 401, 'Unauthorized'],
+  ])('signs out and goes to /login when logout returns %s', async (_label, status, statusText) => {
+    await signIn();
     auth.logout();
-    http.expectOne('/api/auth/logout').flush(null, { status: 500, statusText: 'Error' });
+    http.expectOne('/api/auth/logout').flush(null, { status, statusText });
     expect(auth.user()).toBeNull();
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
+    expect(TestBed.inject(ToastService).toasts()).toEqual([]);
+  });
+
+  it.each([
+    ['a 5xx', (req: TestRequest) => req.flush(null, { status: 502, statusText: 'Bad Gateway' })],
+    ['a network error', (req: TestRequest) => req.error(new ProgressEvent('error'))],
+  ])('stays signed in and shows an error toast when logout fails with %s', async (_label, fail) => {
+    await signIn();
+    auth.logout();
+    fail(http.expectOne('/api/auth/logout'));
+    expect(auth.user()).toEqual(USER);
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(TestBed.inject(ToastService).toasts()).toEqual([expect.objectContaining({ kind: 'error', message: "Couldn't sign out. Try again." })]);
   });
 });
