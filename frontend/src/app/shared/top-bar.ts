@@ -21,7 +21,9 @@ import { MilestoneSocket } from '../core/milestone-socket';
         @if (avatarUrl(); as src) {
           <img class="avatar" [src]="src" alt="" referrerpolicy="no-referrer" />
         }
-        <span class="name">{{ auth.user()?.displayName }}</span>
+        <span class="name" [attr.title]="auth.user()?.displayName">{{
+          auth.user()?.displayName
+        }}</span>
         <button type="button" class="btn btn-ghost btn-sm" (click)="auth.logout()">Log out</button>
       </div>
     </header>
@@ -65,6 +67,12 @@ import { MilestoneSocket } from '../core/milestone-socket';
     }
     .connection[data-status='connecting'] .dot {
       background: var(--color-warning);
+    }
+    .name {
+      max-width: 14rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .avatar {
       width: 32px;

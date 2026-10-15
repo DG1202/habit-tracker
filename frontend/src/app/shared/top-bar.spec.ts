@@ -45,6 +45,14 @@ describe('TopBar', () => {
     expect(logout).toHaveBeenCalledTimes(1);
   });
 
+  it('puts the full display name in a title, since a long one is ellipsized', async () => {
+    user.set({ ...USER, displayName: 'Alexandra Montgomery-Fitzgerald Test' });
+    await fixture.whenStable();
+    expect(el().querySelector('.name')!.getAttribute('title')).toBe(
+      'Alexandra Montgomery-Fitzgerald Test',
+    );
+  });
+
   it('renders an https avatar as decorative without sending a referrer', async () => {
     user.set({ ...USER, avatarUrl: 'https://avatars.example.test/u/1.png' });
     await fixture.whenStable();
