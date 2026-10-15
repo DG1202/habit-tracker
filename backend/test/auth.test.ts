@@ -157,6 +157,9 @@ describe('SSO authentication', () => {
     const cookie = await signIn(ctx);
     const res = await request(ctx, cookie, { method: 'POST', url: '/api/auth/logout' });
     expect(res.statusCode).toBe(204);
+    const cleared = res.cookies.find((c) => c.name === 'sid');
+    expect(cleared).toMatchObject({ value: '', path: '/' });
+    expect(cleared?.expires?.getTime()).toBeLessThanOrEqual(ctx.clock.now().getTime());
     const me = await request(ctx, cookie, { method: 'GET', url: '/api/auth/me' });
     expect(me.statusCode).toBe(401);
   });
