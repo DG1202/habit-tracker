@@ -13,7 +13,7 @@ days. Sign-in is SSO only (Google or GitHub). Every user sees only their own dat
 
 ## Run locally
 
-Requires Node ^22.22.3, ^24.15 or ≥ 26 (the Angular 22 requirement; the backend alone needs ≥ 22.13) and Yarn 4 (`corepack enable` picks the pinned version).
+Requires Node ^22.22.3, ^24.15 or ≥ 26 (the Angular 22 requirement, applied to the backend too) and Yarn 4 (`corepack enable` picks the pinned version).
 
 ```bash
 # 1. Backend
