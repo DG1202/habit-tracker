@@ -28,7 +28,8 @@ describe('SSO authentication', () => {
     expect(res.statusCode).toBe(302);
     expect(res.headers.location).toBe(`${ORIGIN}/`);
     const sid = res.cookies.find((cookie) => cookie.name === 'sid');
-    expect(sid).toMatchObject({ httpOnly: true, sameSite: 'Lax', path: '/' });
+    expect(sid).toMatchObject({ httpOnly: true, sameSite: 'Lax', path: '/', maxAge: 30 * 24 * 60 * 60 });
+    expect(sid!.secure).toBeFalsy();
 
     const users = await ctx.prisma.user.findMany();
     expect(users).toHaveLength(1);
