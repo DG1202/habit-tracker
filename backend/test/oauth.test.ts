@@ -78,6 +78,16 @@ describe.each(['google', 'github'] as const)('real %s OAuth state and PKCE handl
     await expectRejected(`/api/auth/${provider}/callback?code=some-code&state=${location.searchParams.get('state')}`);
   });
 
+  it.each(['access_denied', 'server_error'])('clears the state and verifier cookies when the provider returns %s', async (error) => {
+    const { cookie } = await start();
+    const res = await ctx.app.inject({ method: 'GET', url: `/api/auth/${provider}/callback?error=${error}`, headers: { cookie } });
+
+    expect(res.headers.location).toMatch(`${ORIGIN}/login?error=`);
+    for (const name of [STATE_COOKIE, VERIFIER_COOKIE]) {
+      expect(res.cookies.find((c) => c.name === name)).toMatchObject({ value: '', secure: true, path: '/', expires: new Date(0) });
+    }
+  });
+
   it('sends the PKCE verifier to the token endpoint only after the state matches', async () => {
     const { location, verifier, cookie } = await start();
     const state = location.searchParams.get('state')!;

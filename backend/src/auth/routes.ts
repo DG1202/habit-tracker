@@ -5,7 +5,7 @@ import type { PrismaClient } from '../db.ts';
 import { isValidTimeZone } from '../lib/dates.ts';
 import type { Hub } from '../milestones/hub.ts';
 import { currentUser, toUserDto } from './current-user.ts';
-import type { ProviderClients, ProviderName, ProviderProfile } from './providers.ts';
+import { clearOAuthCookies, type ProviderClients, type ProviderName, type ProviderProfile } from './providers.ts';
 import { readSessionToken, SESSION_COOKIE, sessionCookieOptions, type SessionService } from './sessions.ts';
 
 export interface AuthRouteDeps {
@@ -39,6 +39,7 @@ export async function authRoutes(app: FastifyInstance, { config, prisma, session
     const { provider } = ProviderParams.parse(request.params);
     const { error } = request.query as { error?: string };
     if (error) {
+      clearOAuthCookies(reply);
       return reply.redirect(`${config.APP_ORIGIN}/login?error=${error === 'access_denied' ? 'access_denied' : 'sso_failed'}`);
     }
     try {

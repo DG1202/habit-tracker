@@ -26,6 +26,14 @@ declare module 'fastify' {
   }
 }
 
+// The default names @fastify/oauth2 uses with hostPrefixedCookies; a __Host- cookie is only cleared with Secure and Path=/.
+const OAUTH_COOKIES = ['__Host-oauth2-redirect-state', '__Host-oauth2-code-verifier'];
+const OAUTH_COOKIE_OPTIONS = { path: '/', secure: true, httpOnly: true, sameSite: 'lax' as const };
+
+export function clearOAuthCookies(reply: FastifyReply): void {
+  for (const name of OAUTH_COOKIES) reply.clearCookie(name, OAUTH_COOKIE_OPTIONS);
+}
+
 const GOOGLE_USERINFO_URL = 'https://openidconnect.googleapis.com/v1/userinfo';
 const GITHUB_USER_URL = 'https://api.github.com/user';
 const GITHUB_EMAILS_URL = 'https://api.github.com/user/emails';
