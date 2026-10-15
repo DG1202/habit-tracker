@@ -7,7 +7,6 @@ import {
   request,
   roundTrip,
   signIn,
-  sleep,
   subscribe,
   userIdOf,
   waitFor,
@@ -39,8 +38,8 @@ describe('WebSocket milestone notifications', () => {
   it('sends nothing before the client subscribes', async () => {
     await createHabitWithStreak(ctx, aliceId, { days: 3, endingOn: '2026-10-15' });
     const socket = await connect(alice);
-    await sleep(150);
-    expect(socket.messages).toEqual([]);
+    await roundTrip(socket);
+    expect(socket.messages).toEqual([{ type: 'error', code: 'INVALID_MESSAGE', message: expect.any(String) }]);
     expect(await ctx.prisma.milestoneNotification.count()).toBe(0);
   });
 

@@ -165,8 +165,6 @@ export async function waitFor(predicate: () => boolean, timeoutMs = 1000): Promi
   }
 }
 
-export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 // Resolves in the same tick the matching frame arrives, so it adds no slack for later frames to sneak in.
 function nextMessage(socket: { ws: WebSocket }, matches: (message: ServerMessage) => boolean): Promise<void> {
   return new Promise((resolve) => {
