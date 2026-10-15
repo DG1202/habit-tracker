@@ -1,33 +1,39 @@
-import { afterNextRender, afterRenderEffect, ChangeDetectionStrategy, Component, DestroyRef, DOCUMENT, ElementRef, inject, viewChild } from '@angular/core';
+import { afterNextRender, afterRenderEffect, ChangeDetectionStrategy, Component, computed, DestroyRef, DOCUMENT, ElementRef, inject, viewChild } from '@angular/core';
 import { ToastService } from '../core/toast-service';
 
 @Component({
   selector: 'ht-toast-stack',
   template: `
     <div #stack class="toasts">
-      @for (toast of toastService.toasts(); track toast.id; let index = $index) {
-        <div
-          class="toast card"
-          [attr.data-kind]="toast.kind"
-          [attr.role]="toast.kind === 'error' ? 'alert' : 'status'"
-          (mouseenter)="onPointer(toast.id, true)"
-          (mouseleave)="onPointer(toast.id, false)"
-          (focusin)="onFocusIn(toast.id, index)"
-          (focusout)="onFocusOut($event, toast.id)"
-        >
-          <span class="toast-icon" aria-hidden="true">{{ toast.kind === 'milestone' ? '🏆' : toast.kind === 'error' ? '⚠️' : '✓' }}</span>
-          <div class="toast-text">
-            <strong>{{ toast.title }}</strong>
-            <span>{{ toast.message }}</span>
-          </div>
-          <button type="button" class="icon-btn" aria-label="Dismiss notification" (click)="toastService.dismiss(toast.id)">×</button>
+      <!-- Live regions are announced reliably only when they exist before their content, so both are always rendered. -->
+      @for (region of regions(); track region.role) {
+        <div class="toast-region" [attr.role]="region.role" aria-atomic="false">
+          @for (toast of region.toasts; track toast.id; let index = $index) {
+            <div
+              class="toast card"
+              [attr.data-kind]="toast.kind"
+              (mouseenter)="onPointer(toast.id, true)"
+              (mouseleave)="onPointer(toast.id, false)"
+              (focusin)="onFocusIn(toast.id, region.offset + index)"
+              (focusout)="onFocusOut($event, toast.id)"
+            >
+              <span class="toast-icon" aria-hidden="true">{{ toast.kind === 'milestone' ? '🏆' : toast.kind === 'error' ? '⚠️' : '✓' }}</span>
+              <div class="toast-text">
+                <strong>{{ toast.title }}</strong>
+                <span>{{ toast.message }}</span>
+              </div>
+              <button type="button" class="icon-btn" aria-label="Dismiss notification" (click)="toastService.dismiss(toast.id)">×</button>
+            </div>
+          }
         </div>
       }
     </div>
   `,
   styles: `
-    .toasts { position: fixed; bottom: var(--space-4); right: var(--space-4); z-index: 1000; display: flex; flex-direction: column; gap: var(--space-2); width: min(380px, calc(100vw - 2 * var(--space-4))); max-height: 50dvh; overflow-y: auto; overscroll-behavior: contain; }
+    .toasts { position: fixed; bottom: var(--space-4); right: var(--space-4); z-index: 1000; display: flex; flex-direction: column; width: min(380px, calc(100vw - 2 * var(--space-4))); max-height: 50dvh; overflow-y: auto; overscroll-behavior: contain; }
     @media (max-width: 600px) { .toasts { left: var(--space-4); width: auto; } }
+    .toast-region { display: flex; flex-direction: column; gap: var(--space-2); }
+    .toast-region:not(:empty) ~ .toast-region:not(:empty) { margin-top: var(--space-2); }
     .toast { display: flex; flex-shrink: 0; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); box-shadow: var(--shadow); animation: slide-in 180ms ease-out; border-left: 4px solid var(--color-primary); }
     .toast[data-kind='error'] { border-left-color: var(--color-danger); }
     .toast[data-kind='success'] { border-left-color: var(--color-success); }
@@ -43,6 +49,14 @@ export class ToastStack {
   private readonly document = inject(DOCUMENT);
   private readonly stack = viewChild.required<ElementRef<HTMLElement>>('stack');
   private readonly hovered = new Set<number>();
+  protected readonly regions = computed(() => {
+    const all = this.toastService.toasts();
+    const polite = all.filter((toast) => toast.kind !== 'error');
+    return [
+      { role: 'status', toasts: polite, offset: 0 },
+      { role: 'alert', toasts: all.filter((toast) => toast.kind === 'error'), offset: polite.length },
+    ];
+  });
   private focused: { id: number; index: number } | null = null;
 
   constructor() {

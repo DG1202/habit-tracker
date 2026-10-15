@@ -54,17 +54,25 @@ describe('ToastStack', () => {
     document.documentElement.style.removeProperty('--toast-stack-h');
   });
 
-  it('makes each toast its own live region: errors assertive, others polite, and no wrapping region', () => {
+  it('renders a polite and an assertive live region from the start and inserts toasts into them without their own live roles', () => {
+    const polite = el().querySelector('.toasts [role="status"]')!;
+    const assertive = el().querySelector('.toasts [role="alert"]')!;
+    expect(polite.children).toHaveLength(0);
+    expect(assertive.children).toHaveLength(0);
+    expect([polite.getAttribute('aria-atomic'), assertive.getAttribute('aria-atomic')]).toEqual(['false', 'false']);
+
     toasts.success('Saved');
     toasts.error('Boom');
     toasts.show({ kind: 'milestone', title: '7-day streak!', message: 'Keep going' });
     render();
 
-    const stack = el().querySelector('.toasts')!;
-    expect(stack.hasAttribute('aria-live')).toBe(false);
-    expect(stack.hasAttribute('role')).toBe(false);
-    expect(toastEls().map((toast) => toast.getAttribute('role'))).toEqual(['status', 'alert', 'status']);
-    expect(toastEls().map((toast) => toast.hasAttribute('aria-live'))).toEqual([false, false, false]);
+    expect(el().querySelector('.toasts [role="status"]')).toBe(polite);
+    expect(el().querySelector('.toasts [role="alert"]')).toBe(assertive);
+    expect([...polite.querySelectorAll('.toast')].map((toast) => toast.getAttribute('data-kind'))).toEqual(['success', 'milestone']);
+    expect([...assertive.querySelectorAll('.toast')].map((toast) => toast.getAttribute('data-kind'))).toEqual(['error']);
+    expect(el().querySelectorAll('[role]')).toHaveLength(2);
+    expect(el().querySelectorAll('[aria-live]')).toHaveLength(0);
+    expect(toastEls().map((toast) => toast.querySelector('button')!.getAttribute('aria-label'))).toEqual(Array(3).fill('Dismiss notification'));
   });
 
   it('dismisses through the button and runs the toast\'s onDismiss', () => {
@@ -164,6 +172,18 @@ describe('ToastStack', () => {
     toasts.dismiss(toasts.toasts()[1]!.id);
     render();
     expect(document.activeElement).toBe(dismissButton(0));
+  });
+
+  it('moves focus to the previous toast in DOM order when the last focused toast is in the assertive region', () => {
+    toasts.show({ kind: 'milestone', title: 'First', message: 'One' });
+    toasts.show({ kind: 'milestone', title: 'Second', message: 'Two' });
+    toasts.error('Boom');
+    render();
+
+    dismissButton(2).focus();
+    dismissButton(2).click();
+    render();
+    expect(document.activeElement).toBe(dismissButton(1));
   });
 
   it('still moves focus when the browser fires focusout as the focused toast is removed', () => {
