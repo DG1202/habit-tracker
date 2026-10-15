@@ -138,8 +138,8 @@ All endpoints are under `/api`, JSON, and require a session unless noted.
 | `PATCH /habits/:id` | Edit fields and/or `status` |
 | `DELETE /habits/:id` | Delete (archived only) |
 | `GET /habits/:id/check-ins?month=YYYY-MM` | `{ month, today, dates }` for a month (default: current) |
-| `POST /habits/:id/check-ins` | Check in today |
-| `DELETE /habits/:id/check-ins/today` | Undo today's check-in |
+| `POST /habits/:id/check-ins` | Check in today; `201` with the habit + stats |
+| `DELETE /habits/:id/check-ins/today` | Undo today's check-in; `200` with the habit + stats |
 
 Errors: `{ "error": { "code": "CHECKIN_EXISTS", "message": "…", "details": [] } }`. Another user's habit
 returns `404` (existence is not revealed).

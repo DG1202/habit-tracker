@@ -15,10 +15,9 @@ export async function checkInRoutes(app: FastifyInstance, { checkIns }: { checkI
     return reply.status(201).send(habit);
   });
 
-  app.delete('/habits/:id/check-ins/today', async (request, reply) => {
-    await checkIns.undoToday(currentUser(request), HabitIdParams.parse(request.params).id);
-    return reply.status(204).send();
-  });
+  app.delete('/habits/:id/check-ins/today', async (request) =>
+    checkIns.undoToday(currentUser(request), HabitIdParams.parse(request.params).id),
+  );
 
   app.get('/habits/:id/check-ins', async (request) => {
     const { id } = HabitIdParams.parse(request.params);

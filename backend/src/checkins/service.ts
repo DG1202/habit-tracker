@@ -32,11 +32,12 @@ export function createCheckInService(
       return habits.get(user, habitId);
     },
 
-    async undoToday(user: User, habitId: string): Promise<void> {
+    async undoToday(user: User, habitId: string): Promise<HabitDto> {
       const habit = await habits.findOwned(user.id, habitId);
       if (habit.status !== 'ACTIVE') throw notActive();
       const { count } = await prisma.checkIn.deleteMany({ where: { habitId, habit: { userId: user.id }, date: todayIn(user.timezone, clock.now()) } });
       if (count === 0) throw notFound('No check-in for today');
+      return habits.get(user, habitId);
     },
 
     async listMonth(user: User, habitId: string, month?: string) {

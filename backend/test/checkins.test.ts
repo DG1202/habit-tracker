@@ -62,11 +62,13 @@ describe('check-ins API', () => {
     expect(res.json().error.code).toBe('BEFORE_START_DATE');
   });
 
-  it('undoes today and recalculates the streak', async () => {
+  it('undoes today and returns the habit with recalculated stats, as check-in does', async () => {
     const habit = await createHabitWithStreak(ctx, aliceId, { days: 4, endingOn: '2026-10-15' });
-    expect((await undo(alice, habit.id)).statusCode).toBe(204);
+    const res = await undo(alice, habit.id);
+    expect(res.statusCode).toBe(200);
+    expect(res.json().stats).toEqual({ currentStreak: 3, bestStreak: 3, totalCheckIns: 3, checkedInToday: false });
     const after = (await request(ctx, alice, { method: 'GET', url: `/api/habits/${habit.id}` })).json();
-    expect(after.stats).toEqual({ currentStreak: 3, bestStreak: 3, totalCheckIns: 3, checkedInToday: false });
+    expect(res.json()).toEqual(after);
     expect((await undo(alice, habit.id)).statusCode).toBe(404);
   });
 
