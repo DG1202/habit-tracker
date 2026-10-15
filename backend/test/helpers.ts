@@ -1,4 +1,5 @@
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import type { Socket } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -8,6 +9,7 @@ import type { Config } from '../src/config.ts';
 import { createPrisma, type PrismaClient } from '../src/db.ts';
 import { addDays } from '../src/lib/dates.ts';
 import type { ProviderClient, ProviderClients, ProviderName, ProviderProfile } from '../src/auth/providers.ts';
+import type { WebSocket } from 'ws';
 
 export const ORIGIN = 'http://localhost:4300';
 
@@ -136,3 +138,33 @@ export async function createHabitWithStreak(
   }
   return habit;
 }
+
+export type ServerMessage = { type: string } & Record<string, unknown>;
+
+export async function openSocket(ctx: TestContext, cookie: string | null, origin = ORIGIN) {
+  // injectWS supplies no socket, so request.ip (used by rate limiting) would be undefined.
+  const socket = { remoteAddress: '127.0.0.1' } as Socket;
+  const ws = await ctx.app.injectWS('/ws', { headers: { origin, ...(cookie ? { cookie } : {}) }, socket });
+  const messages: ServerMessage[] = [];
+  ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+  return { ws, messages };
+}
+
+export async function waitFor(predicate: () => boolean, timeoutMs = 1000): Promise<void> {
+  const started = Date.now();
+  while (!predicate()) {
+    if (Date.now() - started > timeoutMs) throw new Error('waitFor timed out');
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
+export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export async function subscribe(socket: { ws: WebSocket; messages: ServerMessage[] }) {
+  socket.ws.send(JSON.stringify({ type: 'subscribe', topics: ['milestones'] }));
+  await waitFor(() => socket.messages.some((m) => m.type === 'subscribed'));
+  await sleep(50);
+}
+
+export const milestonesOf = (messages: ServerMessage[]) =>
+  messages.filter((m) => m.type === 'milestone').map((m) => m.milestone);

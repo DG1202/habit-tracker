@@ -5,6 +5,7 @@ import { systemClock, type Clock } from './lib/clock.ts';
 import { AppError, errorHandler } from './lib/errors.ts';
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
+import websocket from '@fastify/websocket';
 import { currentUser } from './auth/current-user.ts';
 import { registerOAuthProviders, type ProviderClients } from './auth/providers.ts';
 import { authRoutes } from './auth/routes.ts';
@@ -13,6 +14,9 @@ import { createHabitService } from './habits/service.ts';
 import { habitRoutes } from './habits/routes.ts';
 import { createCheckInService } from './checkins/service.ts';
 import { checkInRoutes } from './checkins/routes.ts';
+import { createHub } from './milestones/hub.ts';
+import { createMilestoneNotifier, createMilestoneService } from './milestones/service.ts';
+import { wsRoutes } from './milestones/ws-route.ts';
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -43,6 +47,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     timeWindow: '1 minute',
     errorResponseBuilder: (_request, context) => new AppError(429, 'RATE_LIMITED', `Too many requests. Try again in ${context.after}.`),
   });
+  await app.register(websocket, { options: { maxPayload: 4096 } });
 
   const sessions = createSessionService(deps.prisma, clock);
   app.decorateRequest('user', null);
@@ -57,7 +62,12 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(authRoutes, { prefix: '/api', config, prisma: deps.prisma, sessions, providers });
 
   const habits = createHabitService(deps.prisma, clock);
-  const checkIns = createCheckInService(deps.prisma, clock, habits, async () => {});
+  const hub = createHub();
+  const milestones = createMilestoneService(deps.prisma, clock);
+  const notifier = createMilestoneNotifier(hub, milestones);
+  const checkIns = createCheckInService(deps.prisma, clock, habits, (userId) =>
+    notifier.notifyUser(userId).catch((error) => app.log.error({ err: error }, 'Milestone notification failed')),
+  );
   await app.register(
     async (scope) => {
       scope.addHook('preHandler', async (request) => {
@@ -68,6 +78,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     },
     { prefix: '/api' },
   );
+  await app.register(wsRoutes, { config, hub, milestones, notifier });
 
   app.get('/api/health', async () => ({ status: 'ok' }));
   return app;
