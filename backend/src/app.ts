@@ -5,10 +5,12 @@ import { systemClock, type Clock } from './lib/clock.ts';
 import { AppError, errorHandler } from './lib/errors.ts';
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
-import './auth/current-user.ts';
+import { currentUser } from './auth/current-user.ts';
 import { registerOAuthProviders, type ProviderClients } from './auth/providers.ts';
 import { authRoutes } from './auth/routes.ts';
 import { createSessionService, readSessionToken } from './auth/sessions.ts';
+import { createHabitService } from './habits/service.ts';
+import { habitRoutes } from './habits/routes.ts';
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -51,6 +53,17 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   const providers = deps.providers ?? (await registerOAuthProviders(app, config));
   await app.register(authRoutes, { prefix: '/api', config, prisma: deps.prisma, sessions, providers });
+
+  const habits = createHabitService(deps.prisma, clock);
+  await app.register(
+    async (scope) => {
+      scope.addHook('preHandler', async (request) => {
+        currentUser(request);
+      });
+      await scope.register(habitRoutes, { habits });
+    },
+    { prefix: '/api' },
+  );
 
   app.get('/api/health', async () => ({ status: 'ok' }));
   return app;

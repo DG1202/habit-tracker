@@ -6,6 +6,7 @@ import type { FastifyInstance, InjectOptions } from 'fastify';
 import { buildApp } from '../src/app.ts';
 import type { Config } from '../src/config.ts';
 import { createPrisma, type PrismaClient } from '../src/db.ts';
+import { addDays } from '../src/lib/dates.ts';
 import type { ProviderClient, ProviderClients, ProviderName, ProviderProfile } from '../src/auth/providers.ts';
 
 export const ORIGIN = 'http://localhost:4300';
@@ -113,4 +114,25 @@ export async function signIn(ctx: TestContext, provider: ProviderName = 'google'
 export async function userIdOf(ctx: TestContext, cookie: string): Promise<string> {
   const res = await request(ctx, cookie, { method: 'GET', url: '/api/auth/me' });
   return res.json<{ id: string }>().id;
+}
+
+export async function createHabitWithStreak(
+  ctx: TestContext,
+  userId: string,
+  options: { days: number; endingOn: string; name?: string; status?: 'ACTIVE' | 'PAUSED' | 'ARCHIVED' },
+) {
+  const habit = await ctx.prisma.habit.create({
+    data: {
+      userId,
+      name: options.name ?? `Habit with ${options.days} days`,
+      startDate: addDays(options.endingOn, -60),
+      status: options.status ?? 'ACTIVE',
+    },
+  });
+  if (options.days > 0) {
+    await ctx.prisma.checkIn.createMany({
+      data: Array.from({ length: options.days }, (_, i) => ({ habitId: habit.id, date: addDays(options.endingOn, -i) })),
+    });
+  }
+  return habit;
 }
