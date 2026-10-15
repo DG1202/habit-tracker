@@ -55,8 +55,9 @@ export async function wsRoutes(app: FastifyInstance, { config, hub, milestones, 
         try {
           if (message.type === 'subscribe') {
             hub.subscribe(userId, socket);
-            send(socket, { type: 'subscribed', topics: ['milestones'] });
+            // Sent last so clients (and tests) can treat it as "pending milestones have been delivered".
             await notifier.notifyUser(userId);
+            send(socket, { type: 'subscribed', topics: ['milestones'] });
           } else if (await milestones.ack(userId, message.id)) {
             send(socket, { type: 'acked', id: message.id });
           } else {

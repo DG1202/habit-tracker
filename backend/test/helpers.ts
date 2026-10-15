@@ -164,10 +164,29 @@ export async function waitFor(predicate: () => boolean, timeoutMs = 1000): Promi
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Resolves in the same tick the matching frame arrives, so it adds no slack for later frames to sneak in.
+function nextMessage(socket: { ws: WebSocket }, matches: (message: ServerMessage) => boolean): Promise<void> {
+  return new Promise((resolve) => {
+    const onMessage = (data: Buffer) => {
+      if (!matches(JSON.parse(data.toString()))) return;
+      socket.ws.off('message', onMessage);
+      resolve();
+    };
+    socket.ws.on('message', onMessage);
+  });
+}
+
 export async function subscribe(socket: { ws: WebSocket; messages: ServerMessage[] }) {
+  const subscribed = nextMessage(socket, (m) => m.type === 'subscribed');
   socket.ws.send(JSON.stringify({ type: 'subscribe', topics: ['milestones'] }));
-  await waitFor(() => socket.messages.some((m) => m.type === 'subscribed'));
-  await sleep(50);
+  await subscribed;
+}
+
+// Frames on one socket arrive in order, so once this reply is in, every frame the server wrote earlier has arrived.
+export async function roundTrip(socket: { ws: WebSocket; messages: ServerMessage[] }) {
+  const replied = nextMessage(socket, (m) => m.type === 'error' && m.code === 'INVALID_MESSAGE');
+  socket.ws.send('round-trip');
+  await replied;
 }
 
 export const milestonesOf = (messages: ServerMessage[]) =>

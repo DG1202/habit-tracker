@@ -5,6 +5,7 @@ import {
   milestonesOf,
   openSocket,
   request,
+  roundTrip,
   signIn,
   sleep,
   subscribe,
@@ -128,7 +129,7 @@ describe('WebSocket milestone notifications', () => {
     await subscribe(aliceSocket);
     await request(ctx, alice, { method: 'POST', url: `/api/habits/${habit.id}/check-ins`, payload: {} });
     await waitFor(() => milestonesOf(aliceSocket.messages).length === 1);
-    await sleep(50);
+    await roundTrip(bobSocket);
     expect(milestonesOf(bobSocket.messages)).toEqual([]);
   });
 
