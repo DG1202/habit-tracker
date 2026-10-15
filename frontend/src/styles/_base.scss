@@ -1,7 +1,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; }
-// ToastStack publishes --toast-stack-h; keep focused controls and the last rows clear of it.
-html { scroll-padding-bottom: calc(var(--toast-stack-h, 0px) + var(--space-4)); }
+// Keep focused controls clear of the sticky top bar; ToastStack publishes --toast-stack-h for the bottom.
+html { scroll-padding-top: var(--top-bar-h); scroll-padding-bottom: calc(var(--toast-stack-h, 0px) + var(--space-4)); }
 body {
   font-family: var(--font);
   font-size: var(--text-md);

@@ -23,7 +23,7 @@ import { MilestoneSocket } from '../core/milestone-socket';
     </header>
   `,
   styles: `
-    .top-bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-5); background: var(--color-top-bar); backdrop-filter: blur(8px); border-bottom: 1px solid var(--color-border); }
+    .top-bar { position: sticky; top: 0; min-height: var(--top-bar-h); z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-5); background: var(--color-top-bar); backdrop-filter: blur(8px); border-bottom: 1px solid var(--color-border); }
     .brand { font-weight: 700; color: var(--color-text); text-decoration: none; }
     .account { display: flex; align-items: center; gap: var(--space-3); }
     .connection { display: inline-flex; }
