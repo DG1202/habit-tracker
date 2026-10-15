@@ -3,7 +3,7 @@ import { afterNextRender, ChangeDetectionStrategy, Component, ElementRef, input,
 @Component({
   selector: 'ht-confirm-dialog',
   template: `
-    <dialog #dialog class="dialog" aria-labelledby="confirm-title" (cancel)="$event.preventDefault(); cancelled.emit()">
+    <dialog #dialog class="dialog" aria-labelledby="confirm-title" (cancel)="$event.preventDefault(); cancelled.emit()" (click)="onClick($event)">
       <div class="dialog-body">
         <h2 id="confirm-title">{{ title() }}</h2>
         <p class="muted">{{ message() }}</p>
@@ -28,5 +28,10 @@ export class ConfirmDialog {
 
   constructor() {
     afterNextRender(() => this.dialog().nativeElement.showModal?.());
+  }
+
+  protected onClick(event: MouseEvent): void {
+    // The body fills the dialog, so only a backdrop click targets the <dialog> itself.
+    if (event.target === this.dialog().nativeElement) this.cancelled.emit();
   }
 }

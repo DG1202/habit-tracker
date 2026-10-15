@@ -139,4 +139,31 @@ describe('HabitFormDialog', () => {
     expect(saved).toHaveBeenCalledTimes(1);
     expect(saved).toHaveBeenCalledWith(HABIT);
   });
+
+  it('clears the server error banner once the user edits a field', async () => {
+    await render();
+    api.create.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 500, error: { error: { code: 'INTERNAL', message: 'Server exploded', details: [] } } })),
+    );
+    type('input[formcontrolname="name"]', 'Read');
+    await submit();
+    expect(el().querySelector('.alert')!.textContent).toContain('Server exploded');
+
+    type('input[formcontrolname="name"]', 'Read more');
+    await fixture.whenStable();
+    expect(el().querySelector('.alert')).toBeNull();
+  });
+
+  it.each([
+    ['the × button', () => el().querySelector<HTMLButtonElement>('.dialog-header .icon-btn')!.click()],
+    ['Cancel', () => el().querySelector<HTMLButtonElement>('.dialog-footer .btn-ghost')!.click()],
+    ['Esc', () => el().querySelector('dialog')!.dispatchEvent(new Event('cancel', { cancelable: true }))],
+  ])('emits closed from %s', async (_label, close) => {
+    await render();
+    const closed = vi.fn();
+    fixture.componentInstance.closed.subscribe(closed);
+    close();
+    await fixture.whenStable();
+    expect(closed).toHaveBeenCalledTimes(1);
+  });
 });

@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { merge, of, Subject, type Observable } from 'rxjs';
-import { catchError, debounceTime, map, switchMap } from 'rxjs/operators';
+import { merge, of, Subject, timer, type Observable } from 'rxjs';
+import { catchError, debounce, map, switchMap } from 'rxjs/operators';
 import { toApiError } from '../../core/api-error';
 import { withoutTodayCheckIn } from '../../core/habit-updates';
 import { HabitsApi } from '../../core/habits-api';
@@ -9,6 +9,7 @@ import type { Habit, HabitQuery, HabitStatus } from '../../core/models';
 import { ToastService } from '../../core/toast-service';
 
 const EMPTY_QUERY: HabitQuery = { q: '', status: '', today: '' };
+const SEARCH_DEBOUNCE_MS = 250;
 
 @Injectable()
 export class HabitsStore {
@@ -28,7 +29,16 @@ export class HabitsStore {
   });
 
   constructor() {
-    merge(toObservable(this.query).pipe(debounceTime(250)), this.reload$.pipe(map(() => this.query())))
+    let lastSearch = this.query().q;
+    const queries = toObservable(this.query).pipe(
+      // Only typing is debounced; chips and clearing the search apply at once.
+      debounce((query) => {
+        const typing = query.q !== lastSearch && query.q !== '';
+        lastSearch = query.q;
+        return typing ? timer(SEARCH_DEBOUNCE_MS) : of(0);
+      }),
+    );
+    merge(queries, this.reload$.pipe(map(() => this.query())))
       .pipe(
         switchMap((query) => {
           this.loading.set(true);

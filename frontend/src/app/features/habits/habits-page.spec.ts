@@ -52,6 +52,7 @@ describe('HabitsPage', () => {
     await settle();
     const req = http.expectOne((r) => r.url === '/api/habits');
     expect((fixture.nativeElement as HTMLElement).querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('[role="status"]')!.textContent).toContain('Loading habits');
 
     req.flush([]);
     await fixture.whenStable();
@@ -79,6 +80,9 @@ describe('HabitsPage', () => {
     const search = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('input[type="search"]')!;
     search.value = 'zzz';
     search.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS - 1);
+    http.expectNone((r) => r.url === '/api/habits');
     await settle();
     const filtered = http.expectOne((r) => r.url === '/api/habits');
     expect(filtered.request.params.get('q')).toBe('zzz');
@@ -87,7 +91,7 @@ describe('HabitsPage', () => {
     expect(text()).toContain('No habits match your filters');
 
     (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.empty-state button')!.click();
-    await settle();
+    await fixture.whenStable();
     http.expectOne((r) => r.url === '/api/habits' && !r.params.has('q')).flush([HABIT]);
     await fixture.whenStable();
     expect(text()).toContain('Read 20 pages');
@@ -199,6 +203,8 @@ describe('HabitsPage', () => {
       req.flush(null);
       await fixture.whenStable();
       list().flush([HABIT]);
+      await fixture.whenStable();
+      expect(button('Check in').disabled).toBe(false);
     });
 
     it('pauses a habit', async () => {
@@ -211,6 +217,52 @@ describe('HabitsPage', () => {
       req.flush({ ...HABIT, status: 'PAUSED' });
       await fixture.whenStable();
       list().flush([{ ...HABIT, status: 'PAUSED' }]);
+      await fixture.whenStable();
+      expect(button('Resume')).toBeDefined();
+      expect(button('Check in')).toBeUndefined();
+      expect(root().querySelector('.badge')!.textContent).toContain('Paused');
+    });
+
+    it('applies a status chip without waiting for the search debounce', async () => {
+      await load(HABIT);
+      button('Paused').click();
+      await fixture.whenStable();
+      const req = list();
+      expect(req.request.params.get('status')).toBe('PAUSED');
+      req.flush([]);
+    });
+
+    it('opens the form for a new habit, creates it, closes the dialog and reloads', async () => {
+      await load(HABIT);
+      button('+ New habit').click();
+      await fixture.whenStable();
+      expect(root().querySelector('dialog h2')!.textContent).toContain('New habit');
+
+      const name = root().querySelector<HTMLInputElement>('dialog input[formcontrolname="name"]')!;
+      name.value = 'Meditate';
+      name.dispatchEvent(new Event('input'));
+      root().querySelector('dialog form')!.dispatchEvent(new Event('submit'));
+      await fixture.whenStable();
+      const create = http.expectOne((r) => r.url === '/api/habits' && r.method === 'POST');
+      expect(create.request.body).toMatchObject({ name: 'Meditate' });
+      create.flush({ ...HABIT, id: 'h2', name: 'Meditate' });
+      await fixture.whenStable();
+
+      expect(root().querySelector('dialog')).toBeNull();
+      list().flush([HABIT, { ...HABIT, id: 'h2', name: 'Meditate' }]);
+      await fixture.whenStable();
+      expect(text()).toContain('Meditate');
+    });
+
+    it('opens the form prefilled for Edit and closes it on Cancel without a request', async () => {
+      await load(HABIT);
+      button('Edit').click();
+      await fixture.whenStable();
+      expect(root().querySelector<HTMLInputElement>('dialog input[formcontrolname="name"]')!.value).toBe('Read 20 pages');
+
+      root().querySelector<HTMLButtonElement>('dialog .dialog-footer .btn-ghost')!.click();
+      await fixture.whenStable();
+      expect(root().querySelector('dialog')).toBeNull();
     });
 
     it('cancelling the delete confirmation sends no request', async () => {

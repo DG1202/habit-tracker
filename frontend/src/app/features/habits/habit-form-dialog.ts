@@ -11,6 +11,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators, type AbstractControl, type ValidationErrors } from '@angular/forms';
 import { finalize } from 'rxjs/operators';
 import { toApiError } from '../../core/api-error';
@@ -63,6 +64,7 @@ export class HabitFormDialog implements OnInit {
 
   constructor() {
     afterNextRender(() => this.dialog().nativeElement.showModal?.());
+    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.serverError.set(null));
   }
 
   ngOnInit(): void {

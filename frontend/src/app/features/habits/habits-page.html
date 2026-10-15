@@ -8,6 +8,8 @@
 
 <ht-habit-filters [query]="store.query()" (queryChange)="store.patchQuery($event)" />
 
+<p class="visually-hidden" role="status">{{ store.loading() ? 'Loading habits…' : '' }}</p>
+
 @if (store.error(); as error) {
   <ht-error-banner [message]="error" (retry)="store.reload()" />
 } @else if (store.loading() && store.habits().length === 0) {
