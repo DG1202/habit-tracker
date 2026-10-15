@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { vi } from 'vitest';
 import type { Habit } from '../../core/models';
 import { ToastService } from '../../core/toast-service';
 import { HabitsPage } from './habits-page';
@@ -17,8 +18,7 @@ const HABIT: Habit = {
   updatedAt: '2026-10-01T00:00:00.000Z',
 };
 
-const DEBOUNCE_MS = 300;
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const DEBOUNCE_MS = 250;
 
 describe('HabitsPage', () => {
   let fixture: ComponentFixture<HabitsPage>;
@@ -26,11 +26,14 @@ describe('HabitsPage', () => {
   const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
 
   async function settle() {
-    await wait(DEBOUNCE_MS);
+    await fixture.whenStable();
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
     await fixture.whenStable();
   }
 
   beforeEach(async () => {
+    // debounceTime runs on setInterval + Date.now; Angular's zoneless scheduler keeps its real setTimeout.
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
     TestBed.configureTestingModule({
       imports: [HabitsPage],
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
@@ -40,7 +43,10 @@ describe('HabitsPage', () => {
     await fixture.whenStable();
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    vi.useRealTimers();
+  });
 
   it('shows a loading skeleton, then the "no habits" empty state', async () => {
     await settle();
