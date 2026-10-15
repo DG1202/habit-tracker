@@ -119,6 +119,13 @@ describe('HabitDetailsPage', () => {
     await flushLoad({ ...HABIT, startDate: '2999-01-01', startsInFuture: true });
     expect(button('Starts on 2999-01-01').disabled).toBe(true);
     expect(button('Check in for today')).toBeUndefined();
+    expect(text()).not.toContain('Started');
+    expect(text().match(/2999-01-01/g)).toHaveLength(1);
+  });
+
+  it('shows when a habit started once it has started', async () => {
+    await flushLoad(HABIT);
+    expect(text()).toContain('Started 2026-10-01');
   });
 
   it("follows the server's startsInFuture rather than comparing dates", async () => {

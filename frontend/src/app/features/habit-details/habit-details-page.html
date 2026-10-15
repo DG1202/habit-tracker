@@ -22,7 +22,9 @@
       @if (habit.description) {
         <p>{{ habit.description }}</p>
       }
-      <p class="muted meta">Started {{ habit.startDate }}</p>
+      @if (!habit.startsInFuture) {
+        <p class="muted meta">Started {{ habit.startDate }}</p>
+      }
       @if (habit.status === 'ACTIVE') {
         <div>
           @if (habit.startsInFuture) {
