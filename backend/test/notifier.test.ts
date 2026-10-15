@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PrismaClient } from '../src/db.ts';
 import type { Hub } from '../src/milestones/hub.ts';
 import { createMilestoneNotifier, createMilestoneService } from '../src/milestones/service.ts';
@@ -54,6 +54,54 @@ describe('milestone notifier', () => {
     await createMilestoneNotifier(next.hub, createMilestoneService(ctx.prisma, ctx.clock)).notifyUser(userId);
     expect(delivered.map((m) => (m as { milestone: number }).milestone)).toEqual([3, 7]);
     expect(await ctx.prisma.milestoneNotification.count()).toBe(2);
+  });
+
+  it('re-evaluates after a release when a subscriber has arrived meanwhile, so the milestone is not delayed', async () => {
+    await createHabitWithStreak(ctx, userId, { days: 3, endingOn: '2026-10-15' });
+    const delivered: object[] = [];
+    let sends = 0;
+    // The first send finds nobody; a new subscriber is live by the time the release completes.
+    const hub = {
+      has: () => true,
+      send: (_userId: string, message: object) => {
+        if (sends++ === 0) return 0;
+        delivered.push(message);
+        return 1;
+      },
+    } as unknown as Hub;
+
+    await createMilestoneNotifier(hub, createMilestoneService(ctx.prisma, ctx.clock)).notifyUser(userId);
+    expect(delivered.map((m) => (m as { milestone: number }).milestone)).toEqual([3]);
+    expect(await ctx.prisma.milestoneNotification.count()).toBe(1);
+  });
+
+  it('re-evaluates at most once per notification, however often subscribers come and go', async () => {
+    await createHabitWithStreak(ctx, userId, { days: 3, endingOn: '2026-10-15' });
+    const milestones = createMilestoneService(ctx.prisma, ctx.clock);
+    const collectNew = vi.spyOn(milestones, 'collectNew');
+    const hub = { has: () => true, send: () => 0 } as unknown as Hub;
+
+    await createMilestoneNotifier(hub, milestones).notifyUser(userId);
+    expect(collectNew).toHaveBeenCalledTimes(2);
+    expect(await ctx.prisma.milestoneNotification.count()).toBe(0);
+  });
+
+  it('does not re-evaluate after a release when nobody is subscribed', async () => {
+    await createHabitWithStreak(ctx, userId, { days: 3, endingOn: '2026-10-15' });
+    const milestones = createMilestoneService(ctx.prisma, ctx.clock);
+    const collectNew = vi.spyOn(milestones, 'collectNew');
+    let live = true;
+    const hub = {
+      has: () => live,
+      send: () => {
+        live = false;
+        return 0;
+      },
+    } as unknown as Hub;
+
+    await createMilestoneNotifier(hub, milestones).notifyUser(userId);
+    expect(collectNew).toHaveBeenCalledOnce();
+    expect(await ctx.prisma.milestoneNotification.count()).toBe(0);
   });
 
   it('records a delivered milestone once, ever', async () => {

@@ -74,10 +74,17 @@ export function createMilestoneNotifier(hub: Hub, milestones: MilestoneService) 
   return {
     async notifyUser(userId: string): Promise<void> {
       // Recording a milestone as sent with nobody listening would lose it, so only evaluate while subscribed.
-      if (!hub.has(userId)) return;
-      for (const message of await milestones.collectNew(userId)) {
-        // The last subscriber left mid-evaluation: un-record it so the next connect delivers it.
-        if (hub.send(userId, message) === 0) await milestones.release(message.id);
+      // A second pass covers a subscriber that arrived mid-evaluation and skipped a row we then released.
+      for (let pass = 0; pass < 2 && hub.has(userId); pass++) {
+        let released = false;
+        for (const message of await milestones.collectNew(userId)) {
+          // The last subscriber left mid-evaluation: un-record it so the next connect delivers it.
+          if (hub.send(userId, message) === 0) {
+            await milestones.release(message.id);
+            released = true;
+          }
+        }
+        if (!released) return;
       }
     },
   };
