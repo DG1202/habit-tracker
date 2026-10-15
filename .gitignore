@@ -11,3 +11,4 @@ coverage/
 
 backend/src/generated/
 backend/.yarn/
+frontend/.yarn/
