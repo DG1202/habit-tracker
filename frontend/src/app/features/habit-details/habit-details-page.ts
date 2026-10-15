@@ -6,6 +6,7 @@ import { finalize, map } from 'rxjs/operators';
 import { toApiError } from '../../core/api-error';
 import { withoutTodayCheckIn } from '../../core/habit-updates';
 import { HabitsApi } from '../../core/habits-api';
+import { localToday } from '../../core/local-date';
 import type { Habit, MonthCheckIns } from '../../core/models';
 import { ToastService } from '../../core/toast-service';
 import { EmptyState } from '../../shared/empty-state';
@@ -53,6 +54,7 @@ export class HabitDetailsPage implements OnInit {
   protected readonly busy = signal(false);
   protected readonly statusLabels = STATUS_LABELS;
   protected readonly weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  protected readonly today = computed(() => this.month()?.today ?? localToday());
 
   protected readonly weeks = computed(() => {
     const month = this.month();

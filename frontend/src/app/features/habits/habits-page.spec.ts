@@ -184,6 +184,12 @@ describe('HabitsPage', () => {
       expect(stats).toMatch(/Total\s*21/);
     });
 
+    it('shows a disabled "Starts on" instead of Check in for a habit that starts in the future', async () => {
+      await load({ ...HABIT, startDate: '2999-01-01' });
+      expect(button('Starts on 2999-01-01').disabled).toBe(true);
+      expect(button('Check in')).toBeUndefined();
+    });
+
     it('undoes today\'s check-in', async () => {
       await load({ ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } });
       button('✓ Done · Undo').click();

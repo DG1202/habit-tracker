@@ -111,4 +111,10 @@ describe('HabitDetailsPage', () => {
     expect(root().querySelector('ht-error-banner')).not.toBeNull();
     expect(text()).toContain('This habit does not exist or is not yours.');
   });
+
+  it('shows a disabled "Starts on" instead of Check in for a habit that starts in the future', async () => {
+    await flushLoad({ ...HABIT, startDate: '2999-01-01' });
+    expect(button('Starts on 2999-01-01').disabled).toBe(true);
+    expect(button('Check in for today')).toBeUndefined();
+  });
 });

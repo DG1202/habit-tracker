@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { localToday } from '../../core/local-date';
 import type { Habit, HabitStatus } from '../../core/models';
 
 export const STATUS_LABELS: Record<HabitStatus, string> = { ACTIVE: 'Active', PAUSED: 'Paused', ARCHIVED: 'Archived' };
@@ -27,7 +28,9 @@ export const STATUS_LABELS: Record<HabitStatus, string> = { ACTIVE: 'Active', PA
 
       <div class="habit-today">
         @if (habit().status === 'ACTIVE') {
-          @if (habit().stats.checkedInToday) {
+          @if (notStarted()) {
+            <button type="button" class="btn" disabled>Starts on {{ habit().startDate }}</button>
+          } @else if (habit().stats.checkedInToday) {
             <button type="button" class="btn btn-success-soft" [disabled]="busy()" [attr.aria-label]="'Done today. Undo check-in for ' + habit().name" (click)="undo.emit()">
               ✓ Done · Undo
             </button>
@@ -94,4 +97,5 @@ export class HabitRow {
   readonly statusChange = output<HabitStatus>();
   readonly delete = output<void>();
   protected readonly statusLabels = STATUS_LABELS;
+  protected readonly notStarted = computed(() => this.habit().startDate > localToday());
 }

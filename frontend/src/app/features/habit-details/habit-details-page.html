@@ -17,7 +17,9 @@
       <p class="muted meta">Started {{ habit.startDate }}</p>
       @if (habit.status === 'ACTIVE') {
         <div>
-          @if (habit.stats.checkedInToday) {
+          @if (habit.startDate > today()) {
+            <button type="button" class="btn" disabled>Starts on {{ habit.startDate }}</button>
+          } @else if (habit.stats.checkedInToday) {
             <button type="button" class="btn btn-success-soft" [disabled]="busy()" (click)="undo()">✓ Done today · Undo</button>
           } @else {
             <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="checkIn()">Check in for today</button>
