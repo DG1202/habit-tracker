@@ -20,11 +20,17 @@ export class HabitsStore {
   private readonly awaitingReload = new Set<string>();
   private shownQuery: HabitQuery | null = null;
 
-  readonly query = signal<HabitQuery>(EMPTY_QUERY);
-  readonly habits = signal<Habit[]>([]);
-  readonly loading = signal(true);
-  readonly error = signal<string | null>(null);
-  readonly busyIds = signal<ReadonlySet<string>>(new Set());
+  private readonly queryState = signal<HabitQuery>(EMPTY_QUERY);
+  private readonly habitsState = signal<Habit[]>([]);
+  private readonly loadingState = signal(true);
+  private readonly errorState = signal<string | null>(null);
+  private readonly busyState = signal<ReadonlySet<string>>(new Set());
+
+  readonly query = this.queryState.asReadonly();
+  readonly habits = this.habitsState.asReadonly();
+  readonly loading = this.loadingState.asReadonly();
+  readonly error = this.errorState.asReadonly();
+  readonly busyIds = this.busyState.asReadonly();
   readonly hasFilters = computed(() => {
     const query = this.query();
     return Boolean(query.q.trim() || query.status || query.today);
@@ -43,8 +49,8 @@ export class HabitsStore {
     merge(queries, this.reload$.pipe(map(() => this.query())))
       .pipe(
         switchMap((query) => {
-          this.loading.set(true);
-          this.error.set(null);
+          this.loadingState.set(true);
+          this.errorState.set(null);
           return this.api.list(query).pipe(
             tap(() => (this.shownQuery = query)),
             catchError((err: unknown) => {
@@ -52,7 +58,7 @@ export class HabitsStore {
               // Keep the rows only when they match the selected filters and already show the action's result.
               const rowsMatchQuery = this.shownQuery !== null && sameQuery(this.shownQuery, query);
               if (this.awaitingReload.size > 0 && this.habits().length > 0 && rowsMatchQuery) this.toasts.error(message);
-              else this.error.set(message);
+              else this.errorState.set(message);
               return of(null);
             }),
           );
@@ -60,19 +66,19 @@ export class HabitsStore {
         takeUntilDestroyed(),
       )
       .subscribe((habits) => {
-        if (habits) this.habits.set(habits);
-        this.loading.set(false);
+        if (habits) this.habitsState.set(habits);
+        this.loadingState.set(false);
         this.awaitingReload.forEach((id) => this.setBusy(id, false));
         this.awaitingReload.clear();
       });
   }
 
   patchQuery(patch: Partial<HabitQuery>): void {
-    this.query.update((query) => ({ ...query, ...patch }));
+    this.queryState.update((query) => ({ ...query, ...patch }));
   }
 
   clearFilters(): void {
-    this.query.set(EMPTY_QUERY);
+    this.queryState.set(EMPTY_QUERY);
   }
 
   reload(): void {
@@ -101,7 +107,7 @@ export class HabitsStore {
     this.setBusy(id, true);
     request.subscribe({
       next: (updated) => {
-        if (updated) this.habits.update((list) => list.map((item) => (item.id === updated.id ? updated : item)));
+        if (updated) this.habitsState.update((list) => list.map((item) => (item.id === updated.id ? updated : item)));
       },
       complete: () => {
         if (successMessage) this.toasts.success(successMessage);
@@ -117,7 +123,7 @@ export class HabitsStore {
   }
 
   private setBusy(id: string, busy: boolean): void {
-    this.busyIds.update((ids) => {
+    this.busyState.update((ids) => {
       const next = new Set(ids);
       if (busy) next.add(id);
       else next.delete(id);
