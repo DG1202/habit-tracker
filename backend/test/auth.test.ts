@@ -184,6 +184,17 @@ describe('SSO authentication', () => {
     expect(noOrigin.statusCode).toBe(403);
   });
 
+  it.each([
+    ['POST', '/api/auth/logout', undefined],
+    ['PUT', '/api/me/timezone', { timezone: 'UTC' }],
+  ] as const)('answers 403, not 401, to an unauthenticated %s %s from another origin', async (method, url, payload) => {
+    for (const origin of ['https://evil.example.test', undefined]) {
+      const res = await ctx.app.inject({ method, url, headers: origin ? { origin } : {}, payload });
+      expect(res.statusCode).toBe(403);
+      expect(res.json().error.code).toBe('FORBIDDEN_ORIGIN');
+    }
+  });
+
   it('updates the timezone and rejects unknown zones', async () => {
     const cookie = await signIn(ctx);
     const ok = await request(ctx, cookie, { method: 'PUT', url: '/api/me/timezone', payload: { timezone: 'Europe/Kyiv' } });

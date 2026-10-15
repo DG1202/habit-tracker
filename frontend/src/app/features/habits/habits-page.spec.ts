@@ -2,7 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { vi } from 'vitest';
+import { config } from 'rxjs';
+import { onTestFinished, vi } from 'vitest';
 import type { Habit } from '../../core/models';
 import { ToastService } from '../../core/toast-service';
 import { HabitsPage } from './habits-page';
@@ -332,6 +333,12 @@ describe('HabitsPage', () => {
     });
 
     it('confirming delete removes the habit, shows a success toast and reloads', async () => {
+      // DELETE answers 204 with no body; handling it must not throw inside the subscriber.
+      const unhandled = vi.fn();
+      config.onUnhandledError = unhandled;
+      onTestFinished(() => {
+        config.onUnhandledError = null;
+      });
       await load({ ...HABIT, status: 'ARCHIVED' });
       button('Delete').click();
       await fixture.whenStable();
@@ -339,7 +346,7 @@ describe('HabitsPage', () => {
       await fixture.whenStable();
       const req = http.expectOne('/api/habits/h1');
       expect(req.request.method).toBe('DELETE');
-      req.flush(HABIT);
+      req.flush(null);
       await fixture.whenStable();
 
       expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'success' && t.message.includes('was deleted'))).toBe(true);
@@ -347,6 +354,8 @@ describe('HabitsPage', () => {
       await fixture.whenStable();
       expect(root().querySelector('dialog')).toBeNull();
       expect(text()).toContain('No habits yet');
+      await new Promise((resolve) => setTimeout(resolve));
+      expect(unhandled).not.toHaveBeenCalled();
     });
 
     it('shows an error toast when an action fails', async () => {

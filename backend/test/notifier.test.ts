@@ -86,6 +86,18 @@ describe('milestone notifier', () => {
     expect(await ctx.prisma.milestoneNotification.count()).toBe(0);
   });
 
+  it('evaluates once when the subscriber receives everything', async () => {
+    await createHabitWithStreak(ctx, userId, { days: 3, endingOn: '2026-10-15' });
+    const milestones = createMilestoneService(ctx.prisma, ctx.clock);
+    const collectNew = vi.spyOn(milestones, 'collectNew');
+    const delivered: object[] = [];
+    const hub = { has: () => true, send: (_userId: string, message: object) => delivered.push(message) } as unknown as Hub;
+
+    await createMilestoneNotifier(hub, milestones).notifyUser(userId);
+    expect(collectNew).toHaveBeenCalledOnce();
+    expect(delivered).toHaveLength(1);
+  });
+
   it('does not re-evaluate after a release when nobody is subscribed', async () => {
     await createHabitWithStreak(ctx, userId, { days: 3, endingOn: '2026-10-15' });
     const milestones = createMilestoneService(ctx.prisma, ctx.clock);
