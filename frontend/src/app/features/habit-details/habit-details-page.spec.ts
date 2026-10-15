@@ -85,15 +85,15 @@ describe('HabitDetailsPage', () => {
     expect(root().querySelectorAll('.day.checked')).toHaveLength(3);
   });
 
-  it('shows the undone state right after the DELETE even when the reload fails', async () => {
-    http.expectOne('/api/habits/h1').flush(DONE);
+  it('applies the stats from the DELETE response, including best, even when the reload fails', async () => {
+    http.expectOne('/api/habits/h1').flush({ ...DONE, stats: { ...DONE.stats, bestStreak: 3 } });
     http.expectOne('/api/habits/h1/check-ins').flush({ ...MONTH, dates: [...MONTH.dates, MONTH.today] });
     await fixture.whenStable();
     expect(root().querySelectorAll('.day.checked')).toHaveLength(3);
 
     button('✓ Done today · Undo').click();
     await fixture.whenStable();
-    http.expectOne((r) => r.url === '/api/habits/h1/check-ins/today' && r.method === 'DELETE').flush(null, { status: 204, statusText: 'No Content' });
+    http.expectOne((r) => r.url === '/api/habits/h1/check-ins/today' && r.method === 'DELETE').flush({ ...HABIT, stats: { ...HABIT.stats, bestStreak: 2 } });
     await fixture.whenStable();
     http.expectOne('/api/habits/h1').flush({ error: { code: 'INTERNAL', message: 'Server exploded', details: [] } }, { status: 500, statusText: 'Error' });
     http.expectOne((r) => r.url === '/api/habits/h1/check-ins' && r.method === 'GET');
@@ -101,6 +101,7 @@ describe('HabitDetailsPage', () => {
 
     expect(button('Check in for today').disabled).toBe(false);
     expect(text()).toMatch(/Current streak\s*🔥 2/);
+    expect(text()).toMatch(/Best streak\s*2/);
     expect(text()).toMatch(/Total check-ins\s*8/);
     expect(root().querySelectorAll('.day.checked')).toHaveLength(2);
   });

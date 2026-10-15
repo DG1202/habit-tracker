@@ -173,18 +173,19 @@ describe('HabitsPage', () => {
       expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'error' && t.message === 'Server exploded')).toBe(true);
     });
 
-    it('shows the undone state right after the DELETE even when the reload fails', async () => {
-      await load({ ...HABIT, stats: { currentStreak: 5, bestStreak: 9, totalCheckIns: 22, checkedInToday: true } });
+    it('applies the stats from the DELETE response, including best, even when the reload fails', async () => {
+      await load({ ...HABIT, stats: { currentStreak: 9, bestStreak: 9, totalCheckIns: 22, checkedInToday: true } });
       button('✓ Done · Undo').click();
       await fixture.whenStable();
-      http.expectOne('/api/habits/h1/check-ins/today').flush(null, { status: 204, statusText: 'No Content' });
+      http.expectOne('/api/habits/h1/check-ins/today').flush({ ...HABIT, stats: { currentStreak: 8, bestStreak: 8, totalCheckIns: 21, checkedInToday: false } });
       await fixture.whenStable();
       list().flush({ error: { code: 'INTERNAL', message: 'Server exploded', details: [] } }, { status: 500, statusText: 'Error' });
       await fixture.whenStable();
 
       expect(button('Check in').disabled).toBe(false);
       const stats = root().querySelector('.habit-stats')!.textContent!;
-      expect(stats).toMatch(/Current\s*🔥\s*4/);
+      expect(stats).toMatch(/Current\s*🔥\s*8/);
+      expect(stats).toMatch(/Best\s*8/);
       expect(stats).toMatch(/Total\s*21/);
     });
 
@@ -200,7 +201,7 @@ describe('HabitsPage', () => {
       await fixture.whenStable();
       const req = http.expectOne('/api/habits/h1/check-ins/today');
       expect(req.request.method).toBe('DELETE');
-      req.flush(null);
+      req.flush(HABIT);
       await fixture.whenStable();
       list().flush([HABIT]);
       await fixture.whenStable();
@@ -285,7 +286,7 @@ describe('HabitsPage', () => {
       await fixture.whenStable();
       const req = http.expectOne('/api/habits/h1');
       expect(req.request.method).toBe('DELETE');
-      req.flush(null);
+      req.flush(HABIT);
       await fixture.whenStable();
 
       expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'success' && t.message.includes('was deleted'))).toBe(true);

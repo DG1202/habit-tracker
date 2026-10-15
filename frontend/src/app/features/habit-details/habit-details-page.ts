@@ -2,9 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, injec
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { forkJoin, type Observable, type Subscription } from 'rxjs';
-import { finalize, map } from 'rxjs/operators';
+import { finalize } from 'rxjs/operators';
 import { toApiError } from '../../core/api-error';
-import { withoutTodayCheckIn } from '../../core/habit-updates';
 import { HabitsApi } from '../../core/habits-api';
 import { localToday } from '../../core/local-date';
 import type { Habit, HabitStatus, MonthCheckIns } from '../../core/models';
@@ -118,8 +117,7 @@ export class HabitDetailsPage {
   }
 
   protected undo(): void {
-    const habit = this.habit();
-    if (habit) this.mutate(this.api.undoCheckIn(habit.id).pipe(map(() => withoutTodayCheckIn(habit))));
+    this.mutate(this.api.undoCheckIn(this.id()));
   }
 
   protected setStatus(status: HabitStatus): void {

@@ -3,7 +3,6 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { merge, of, Subject, timer, type Observable } from 'rxjs';
 import { catchError, debounce, map, switchMap } from 'rxjs/operators';
 import { toApiError } from '../../core/api-error';
-import { withoutTodayCheckIn } from '../../core/habit-updates';
 import { HabitsApi } from '../../core/habits-api';
 import type { Habit, HabitQuery, HabitStatus } from '../../core/models';
 import { ToastService } from '../../core/toast-service';
@@ -80,7 +79,7 @@ export class HabitsStore {
   }
 
   undo(habit: Habit): void {
-    this.run(habit.id, this.api.undoCheckIn(habit.id).pipe(map(() => withoutTodayCheckIn(habit))));
+    this.run(habit.id, this.api.undoCheckIn(habit.id));
   }
 
   setStatus(habit: Habit, status: HabitStatus): void {

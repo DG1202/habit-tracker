@@ -35,8 +35,8 @@ export class HabitsApi {
     return this.http.post<Habit>(`/api/habits/${encodeURIComponent(id)}/check-ins`, {});
   }
 
-  undoCheckIn(id: string): Observable<void> {
-    return this.http.delete<void>(`/api/habits/${encodeURIComponent(id)}/check-ins/today`);
+  undoCheckIn(id: string): Observable<Habit> {
+    return this.http.delete<Habit>(`/api/habits/${encodeURIComponent(id)}/check-ins/today`);
   }
 
   month(id: string): Observable<MonthCheckIns> {
