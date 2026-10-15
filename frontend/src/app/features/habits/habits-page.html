@@ -1,0 +1,56 @@
+<header class="page-header">
+  <div>
+    <h1>My habits</h1>
+    <p class="muted">Check in every day to grow your streaks.</p>
+  </div>
+  <button type="button" class="btn btn-primary" (click)="editing.set('new')">+ New habit</button>
+</header>
+
+<ht-habit-filters [query]="store.query()" (queryChange)="store.patchQuery($event)" />
+
+@if (store.error(); as error) {
+  <ht-error-banner [message]="error" (retry)="store.reload()" />
+} @else if (store.loading() && store.habits().length === 0) {
+  <ul class="habit-list" aria-busy="true" aria-label="Loading habits">
+    @for (item of skeletons; track item) {
+      <li class="skeleton skeleton-row"></li>
+    }
+  </ul>
+} @else if (store.habits().length === 0) {
+  @if (store.hasFilters()) {
+    <ht-empty-state icon="🔍" title="No habits match your filters" message="Try another search term or clear the filters.">
+      <button type="button" class="btn" (click)="store.clearFilters()">Clear filters</button>
+    </ht-empty-state>
+  } @else {
+    <ht-empty-state icon="🌱" title="No habits yet" message="Create your first habit and start a streak today.">
+      <button type="button" class="btn btn-primary" (click)="editing.set('new')">Create your first habit</button>
+    </ht-empty-state>
+  }
+} @else {
+  <ul class="habit-list" [class.is-refreshing]="store.loading()">
+    @for (habit of store.habits(); track habit.id) {
+      <li>
+        <ht-habit-row
+          [habit]="habit"
+          [busy]="store.busyIds().has(habit.id)"
+          (checkIn)="store.checkIn(habit)"
+          (undo)="store.undo(habit)"
+          (edit)="editing.set(habit)"
+          (statusChange)="store.setStatus(habit, $event)"
+          (delete)="deleting.set(habit)"
+        />
+      </li>
+    }
+  </ul>
+}
+
+@if (deleting(); as habit) {
+  <ht-confirm-dialog
+    title="Delete habit?"
+    [message]="'Delete “' + habit.name + '” and its entire check-in history? This cannot be undone.'"
+    confirmLabel="Delete"
+    [danger]="true"
+    (confirmed)="confirmDelete()"
+    (cancelled)="deleting.set(null)"
+  />
+}
