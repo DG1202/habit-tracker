@@ -415,6 +415,19 @@ describe('HabitDetailsPage', () => {
       expect(post.cancelled).toBe(true);
       expect(TestBed.inject(ToastService).toasts()).toEqual([]);
     });
+
+    it('cancels the reload after an action so it shows no toast', async () => {
+      await flushLoad(HABIT);
+      await checkIn();
+      const habit = http.expectOne((r) => r.url === '/api/habits/h1' && r.method === 'GET');
+      const month = http.expectOne(
+        (r) => r.url === '/api/habits/h1/check-ins' && r.method === 'GET',
+      );
+      await signOut();
+      expect(habit.cancelled).toBe(true);
+      expect(month.cancelled).toBe(true);
+      expect(TestBed.inject(ToastService).toasts()).toEqual([]);
+    });
   });
 
   describe('status actions', () => {

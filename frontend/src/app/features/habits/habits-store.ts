@@ -55,6 +55,7 @@ export class HabitsStore {
           this.loadingState.set(true);
           this.errorState.set(null);
           return this.api.list(query).pipe(
+            this.auth.endWithSession(),
             tap(() => (this.shownQuery = query)),
             catchError((err: unknown) => {
               const message = toApiError(err).message;

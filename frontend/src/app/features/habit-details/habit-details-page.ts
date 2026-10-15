@@ -234,6 +234,7 @@ export class HabitDetailsPage {
       month: this.api.month(this.id()),
     })
       .pipe(
+        this.auth.endWithSession(),
         finalize(() => {
           this.loading.set(false);
           this.busy.set(false);

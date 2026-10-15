@@ -520,6 +520,34 @@ describe('HabitsPage', () => {
       http.expectNone((r) => r.url === '/api/habits');
     });
 
+    it('cancels the reload after an action when the user signs out, so it shows no toast', async () => {
+      vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const loaded = TestBed.inject(AuthStore).ensureLoaded();
+      http.expectOne('/api/auth/me').flush({
+        id: 'u1',
+        provider: 'github',
+        email: null,
+        displayName: 'Alice Test',
+        avatarUrl: null,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      } satisfies User);
+      await loaded;
+      await load(HABIT);
+      button('Check in').click();
+      await fixture.whenStable();
+      http
+        .expectOne('/api/habits/h1/check-ins')
+        .flush({ ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } });
+      await fixture.whenStable();
+      const reload = list();
+
+      TestBed.inject(AuthStore).logout();
+      http.expectOne('/api/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
+      await fixture.whenStable();
+      expect(reload.cancelled).toBe(true);
+      expect(TestBed.inject(ToastService).toasts()).toEqual([]);
+    });
+
     it('shows an error toast when an action fails', async () => {
       await load(HABIT);
       button('Check in').click();

@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import type { Observable } from 'rxjs';
 import { routes } from './app.routes';
 import { AuthStore } from './core/auth-store';
 import type { User } from './core/models';
@@ -30,6 +31,7 @@ describe('app routes', () => {
             user: () => user,
             ensureLoaded: () => Promise.resolve(user),
             markUnreachable: () => undefined,
+            endWithSession: () => (source: Observable<unknown>) => source,
           },
         },
       ],
