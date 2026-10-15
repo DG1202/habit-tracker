@@ -16,8 +16,16 @@ export interface SessionRef {
 }
 
 export function createSessionService(prisma: PrismaClient, clock: Clock) {
+  async function pruneExpired(): Promise<void> {
+    await prisma.session.deleteMany({ where: { expiresAt: { lte: clock.now() } } });
+  }
+
   return {
+    pruneExpired,
+
+    // Also prunes, so sessions whose cookie never comes back are still removed.
     async create(userId: string): Promise<string> {
+      await pruneExpired();
       const token = randomBytes(32).toString('base64url');
       await prisma.session.create({
         data: { userId, tokenHash: hashToken(token), expiresAt: new Date(clock.now().getTime() + SESSION_TTL_MS) },

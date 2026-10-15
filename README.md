@@ -93,7 +93,7 @@ identity is `provider + provider_user_id`.
 - **No account linking:** signing in with Google and with GitHub creates two separate accounts, even for the
   same person.
 - Sessions are server-side (httpOnly cookie, 30 days), so login persists across refresh. Logout deletes the
-  session.
+  session. Expired sessions are deleted at server startup and on every sign-in.
 - At startup only a `401` from `/api/auth/me` counts as signed out. A network error or `5xx` shows a "Cannot
   reach the server" banner with Retry instead of redirecting to `/login`.
 

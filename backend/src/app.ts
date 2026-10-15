@@ -72,6 +72,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(websocket, { options: { maxPayload: 4096 } });
 
   const sessions = createSessionService(deps.prisma, clock);
+  await sessions.pruneExpired();
   app.decorateRequest('user', null);
   app.decorateRequest('session', null);
   app.addHook('onRequest', async (request) => {

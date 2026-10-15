@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createTestContext, openSocket, ORIGIN, request, signIn, subscribe, waitFor, type TestContext } from './helpers.ts';
+import { buildApp } from '../src/app.ts';
+import { createTestContext, openSocket, ORIGIN, request, signIn, subscribe, TEST_CONFIG, waitFor, type TestContext } from './helpers.ts';
 
 describe('SSO authentication', () => {
   let ctx: TestContext;
@@ -151,6 +152,28 @@ describe('SSO authentication', () => {
     const res = await request(ctx, cookie, { method: 'GET', url: '/api/auth/me' });
     expect(res.statusCode).toBe(401);
     expect(await ctx.prisma.session.count()).toBe(0);
+  });
+
+  it('deletes other expired sessions on sign-in', async () => {
+    await signIn(ctx, 'google');
+    await signIn(ctx, 'github');
+    ctx.clock.set('2026-11-20T12:00:00.000Z');
+    const fresh = await signIn(ctx, 'google');
+    expect(await ctx.prisma.session.count()).toBe(1);
+    expect((await request(ctx, fresh, { method: 'GET', url: '/api/auth/me' })).statusCode).toBe(200);
+  });
+
+  it('deletes expired sessions at startup and keeps live ones', async () => {
+    const user = await ctx.prisma.user.create({ data: { provider: 'google', providerUserId: 'startup-user', displayName: 'Startup Test' } });
+    await ctx.prisma.session.createMany({
+      data: [
+        { userId: user.id, tokenHash: 'expired-hash', expiresAt: new Date('2026-10-15T11:59:59.999Z') },
+        { userId: user.id, tokenHash: 'live-hash', expiresAt: new Date('2026-10-15T12:00:00.001Z') },
+      ],
+    });
+    const app = await buildApp({ config: TEST_CONFIG, prisma: ctx.prisma, clock: ctx.clock, providers: ctx.providers.clients, logger: false });
+    await app.close();
+    expect((await ctx.prisma.session.findMany()).map((session) => session.tokenHash)).toEqual(['live-hash']);
   });
 
   it('logs out and invalidates the session', async () => {
