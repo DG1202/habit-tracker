@@ -23,6 +23,7 @@ export class LoginPage {
   readonly error = input<string>();
   protected readonly errorMessage = computed(() => {
     const code = this.error();
-    return code ? (LOGIN_ERRORS[code] ?? LOGIN_ERRORS['sso_failed']) : null;
+    if (!code) return null;
+    return Object.hasOwn(LOGIN_ERRORS, code) ? LOGIN_ERRORS[code] : LOGIN_ERRORS['sso_failed'];
   });
 }
