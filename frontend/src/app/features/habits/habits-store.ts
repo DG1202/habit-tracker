@@ -3,6 +3,7 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { merge, of, Subject, timer, type Observable } from 'rxjs';
 import { catchError, debounce, map, switchMap, tap } from 'rxjs/operators';
 import { toApiError } from '../../core/api-error';
+import { AuthStore } from '../../core/auth-store';
 import { HabitsApi } from '../../core/habits-api';
 import type { Habit, HabitQuery, HabitStatus } from '../../core/models';
 import { ToastService } from '../../core/toast-service';
@@ -16,6 +17,7 @@ const sameQuery = (a: HabitQuery, b: HabitQuery) => a.q === b.q && a.status === 
 export class HabitsStore {
   private readonly api = inject(HabitsApi);
   private readonly toasts = inject(ToastService);
+  private readonly auth = inject(AuthStore);
   private readonly reload$ = new Subject<void>();
   private readonly awaitingReload = new Set<string>();
   private shownQuery: HabitQuery | null = null;
@@ -105,7 +107,7 @@ export class HabitsStore {
     // [disabled] only applies on the next render, so a fast second click still reaches here.
     if (this.busyIds().has(id)) return;
     this.setBusy(id, true);
-    request.subscribe({
+    request.pipe(this.auth.endWithSession()).subscribe({
       next: (updated) => {
         if (updated) this.habitsState.update((list) => list.map((item) => (item.id === updated.id ? updated : item)));
       },

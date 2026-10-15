@@ -1,10 +1,11 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { config } from 'rxjs';
 import { onTestFinished, vi } from 'vitest';
-import type { Habit } from '../../core/models';
+import { AuthStore } from '../../core/auth-store';
+import type { Habit, User } from '../../core/models';
 import { ToastService } from '../../core/toast-service';
 import { HabitsPage } from './habits-page';
 
@@ -412,6 +413,27 @@ describe('HabitsPage', () => {
       expect(text()).toContain('No habits yet');
       await new Promise((resolve) => setTimeout(resolve));
       expect(unhandled).not.toHaveBeenCalled();
+    });
+
+    it('cancels a pending delete when the user signs out, so its response shows no toast', async () => {
+      vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const loaded = TestBed.inject(AuthStore).ensureLoaded();
+      const user: User = { id: 'u1', provider: 'github', email: null, displayName: 'Alice Test', avatarUrl: null, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+      http.expectOne('/api/auth/me').flush(user);
+      await loaded;
+      await load({ ...HABIT, status: 'ARCHIVED' });
+      button('Delete').click();
+      await fixture.whenStable();
+      root().querySelector<HTMLButtonElement>('dialog .btn-primary')!.click();
+      await fixture.whenStable();
+      const remove = http.expectOne((r) => r.url === '/api/habits/h1' && r.method === 'DELETE');
+
+      TestBed.inject(AuthStore).logout();
+      http.expectOne('/api/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
+      await fixture.whenStable();
+      expect(remove.cancelled).toBe(true);
+      expect(TestBed.inject(ToastService).toasts()).toEqual([]);
+      http.expectNone((r) => r.url === '/api/habits');
     });
 
     it('shows an error toast when an action fails', async () => {

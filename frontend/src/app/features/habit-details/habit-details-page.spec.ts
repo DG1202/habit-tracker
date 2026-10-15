@@ -4,7 +4,8 @@ import { Title } from '@angular/platform-browser';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { vi } from 'vitest';
-import type { Habit, MonthCheckIns } from '../../core/models';
+import { AuthStore } from '../../core/auth-store';
+import type { Habit, MonthCheckIns, User } from '../../core/models';
 import { ToastService } from '../../core/toast-service';
 import { HabitDetailsPage } from './habit-details-page';
 
@@ -304,6 +305,61 @@ describe('HabitDetailsPage', () => {
     const req = http.expectOne((r) => r.url === '/api/habits/h1/check-ins' && r.method === 'POST');
     fixture.destroy();
     expect(req.cancelled).toBe(true);
+  });
+
+  async function confirmDelete() {
+    button('Delete').click();
+    await fixture.whenStable();
+    root().querySelector<HTMLButtonElement>('dialog .btn-primary')!.click();
+    await fixture.whenStable();
+    return http.expectOne((r) => r.url === '/api/habits/h1' && r.method === 'DELETE');
+  }
+
+  it('does not report a pending delete as done when the page is destroyed', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    await flushLoad({ ...HABIT, status: 'ARCHIVED' });
+    const remove = await confirmDelete();
+    fixture.destroy();
+    expect(remove.cancelled).toBe(true);
+    expect(TestBed.inject(ToastService).toasts()).toEqual([]);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  describe('when the user signs out', () => {
+    const USER: User = { id: 'u1', provider: 'github', email: null, displayName: 'Alice Test', avatarUrl: null, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+    let navigate: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(async () => {
+      navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const loaded = TestBed.inject(AuthStore).ensureLoaded();
+      http.expectOne('/api/auth/me').flush(USER);
+      await loaded;
+    });
+
+    async function signOut() {
+      TestBed.inject(AuthStore).logout();
+      http.expectOne('/api/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
+      await fixture.whenStable();
+    }
+
+    it('cancels a pending delete so its response shows no toast', async () => {
+      await flushLoad({ ...HABIT, status: 'ARCHIVED' });
+      const remove = await confirmDelete();
+      await signOut();
+      expect(remove.cancelled).toBe(true);
+      expect(TestBed.inject(ToastService).toasts()).toEqual([]);
+      expect(navigate).not.toHaveBeenCalledWith(['/']);
+    });
+
+    it('cancels a pending action so its response does not touch the page', async () => {
+      await flushLoad(HABIT);
+      button('Check in for today').click();
+      await fixture.whenStable();
+      const post = http.expectOne((r) => r.url === '/api/habits/h1/check-ins' && r.method === 'POST');
+      await signOut();
+      expect(post.cancelled).toBe(true);
+      expect(TestBed.inject(ToastService).toasts()).toEqual([]);
+    });
   });
 
   describe('status actions', () => {

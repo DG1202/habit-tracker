@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { forkJoin, type Observable, type Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { toApiError } from '../../core/api-error';
+import { AuthStore } from '../../core/auth-store';
 import { HabitsApi } from '../../core/habits-api';
 import type { Habit, HabitStatus, MonthCheckIns } from '../../core/models';
 import { ToastService } from '../../core/toast-service';
@@ -51,6 +52,7 @@ export class HabitDetailsPage {
 
   private readonly api = inject(HabitsApi);
   private readonly toasts = inject(ToastService);
+  private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly title = inject(Title);
   private readonly destroyRef = inject(DestroyRef);
@@ -96,6 +98,8 @@ export class HabitDetailsPage {
       const habit = this.habit();
       if (habit) this.title.setTitle(`${habit.name} · Habit Tracker`);
     });
+    // takeUntilDestroyed would complete the action and run its success handler.
+    this.destroyRef.onDestroy(() => this.actionSubscription?.unsubscribe());
     effect(() => {
       this.id();
       untracked(() => {
@@ -160,7 +164,7 @@ export class HabitDetailsPage {
     this.busy.set(true);
     this.actionSubscription = this.api
       .remove(habit.id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(this.auth.endWithSession())
       .subscribe({
         complete: () => {
           this.toasts.success(`"${habit.name}" was deleted`);
@@ -177,7 +181,7 @@ export class HabitDetailsPage {
     // load() clears busy when the reload settles; [disabled] lags a render, so guard here too.
     if (this.busy()) return;
     this.busy.set(true);
-    this.actionSubscription = request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.actionSubscription = request.pipe(this.auth.endWithSession()).subscribe({
       next: (habit) => this.apply(habit),
       complete: () => this.load(),
       error: (err: unknown) => {
