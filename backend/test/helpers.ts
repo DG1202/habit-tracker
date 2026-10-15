@@ -12,7 +12,7 @@ export const ORIGIN = 'http://localhost:4300';
 
 export const TEST_CONFIG: Config = {
   NODE_ENV: 'test',
-  PORT: 0,
+  PORT: 3300,
   APP_ORIGIN: ORIGIN,
   DATABASE_URL: 'file:unused',
   SESSION_SECRET: 'test-secret-test-secret-test-secret-123',

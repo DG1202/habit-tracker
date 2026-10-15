@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z.coerce.number().int().nonnegative().default(3300),
+  PORT: z.coerce.number().int().positive().default(3300),
   APP_ORIGIN: z.url().transform((value) => new URL(value).origin),
   DATABASE_URL: z.string().startsWith('file:'),
   SESSION_SECRET: z.string().min(32),
