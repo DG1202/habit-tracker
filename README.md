@@ -19,7 +19,7 @@ Requires Node ≥ 22.13 and Yarn 4 (`corepack enable` picks the pinned version).
 # 1. Backend
 cd backend
 cp .env.example .env          # then fill in OAuth credentials (see below)
-yarn install
+yarn install --immutable      # installs exactly what yarn.lock pins
 yarn db:migrate               # creates SQLite DB
 yarn dev                      # http://localhost:3300
 
