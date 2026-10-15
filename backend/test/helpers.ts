@@ -101,3 +101,16 @@ export function request(ctx: TestContext, cookie: string | null, options: Inject
     headers: { origin: ORIGIN, ...(cookie ? { cookie } : {}), ...options.headers },
   });
 }
+
+export async function signIn(ctx: TestContext, provider: ProviderName = 'google', profile: Partial<ProviderProfile> = {}): Promise<string> {
+  ctx.providers.profiles[provider] = { ...DEFAULT_PROFILES[provider], ...profile };
+  const res = await ctx.app.inject({ method: 'GET', url: `/api/auth/${provider}/callback?code=valid-code&state=stub-state` });
+  const sid = res.cookies.find((cookie) => cookie.name === 'sid');
+  if (!sid) throw new Error(`sign-in failed: ${res.statusCode} ${String(res.headers.location)}`);
+  return `sid=${sid.value}`;
+}
+
+export async function userIdOf(ctx: TestContext, cookie: string): Promise<string> {
+  const res = await request(ctx, cookie, { method: 'GET', url: '/api/auth/me' });
+  return res.json<{ id: string }>().id;
+}
