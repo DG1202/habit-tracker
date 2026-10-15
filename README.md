@@ -164,7 +164,8 @@ Client → server:
 ```
 
 - `subscribe` — the server sends nothing until it receives this. It registers the socket for the user,
-  evaluates milestones immediately, sends any pending `milestone` frames, then replies `subscribed`.
+  evaluates milestones immediately, sends any pending `milestone` frames, then replies `subscribed`. A repeated
+  `subscribe` on the same socket only gets `subscribed` back; it does not evaluate again.
 - `ack` — marks a notification as read (`ackedAt`); sent when the user dismisses a milestone toast. Milestone
   toasts stay on screen until dismissed.
 

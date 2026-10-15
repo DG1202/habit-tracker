@@ -47,6 +47,8 @@ export async function wsRoutes(app: FastifyInstance, { config, hub, milestones, 
       }
       const userId = request.user.id;
       hub.add(userId, socket, request.session);
+      // Repeated subscribes share the first evaluation; later milestones arrive through check-ins.
+      let subscribed: Promise<void> | null = null;
 
       socket.on('message', async (raw: Buffer, isBinary: boolean) => {
         if (!hub.isLive(userId, socket)) return;
@@ -57,9 +59,15 @@ export async function wsRoutes(app: FastifyInstance, { config, hub, milestones, 
         }
         try {
           if (message.type === 'subscribe') {
-            hub.subscribe(userId, socket);
+            if (!subscribed) {
+              hub.subscribe(userId, socket);
+              subscribed = notifier.notifyUser(userId).catch((error: unknown) => {
+                subscribed = null;
+                throw error;
+              });
+            }
             // Sent last so clients (and tests) can treat it as "pending milestones have been delivered".
-            await notifier.notifyUser(userId);
+            await subscribed;
             send(socket, { type: 'subscribed', topics: ['milestones'] });
           } else if (await milestones.ack(userId, message.id)) {
             send(socket, { type: 'acked', id: message.id });

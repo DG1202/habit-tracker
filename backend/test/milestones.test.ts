@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createHabitWithStreak,
   createTestContext,
@@ -80,6 +80,34 @@ describe('WebSocket milestone notifications', () => {
     const second = await connect(alice);
     await subscribe(second);
     expect(milestonesOf(second.messages)).toEqual([]);
+  });
+
+  it('answers a repeated subscribe without evaluating milestones again', async () => {
+    const habit = await createHabitWithStreak(ctx, aliceId, { days: 2, endingOn: '2026-10-14' });
+    const socket = await connect(alice);
+    await subscribe(socket);
+    // Written behind the API's back, so only a fresh evaluation could find the new milestone.
+    await ctx.prisma.checkIn.create({ data: { habitId: habit.id, date: '2026-10-15' } });
+
+    await subscribe(socket);
+    expect(socket.messages).toEqual([
+      { type: 'subscribed', topics: ['milestones'] },
+      { type: 'subscribed', topics: ['milestones'] },
+    ]);
+    expect(await ctx.prisma.milestoneNotification.count()).toBe(0);
+  });
+
+  it('evaluates again on the next subscribe when the first evaluation failed', async () => {
+    await createHabitWithStreak(ctx, aliceId, { days: 3, endingOn: '2026-10-15' });
+    const findUnique = vi.spyOn(ctx.prisma.user, 'findUnique').mockRejectedValueOnce(new Error('database unavailable'));
+    const socket = await connect(alice);
+    socket.ws.send(JSON.stringify({ type: 'subscribe', topics: ['milestones'] }));
+    await waitFor(() => socket.messages.length === 1);
+    expect(socket.messages[0]).toMatchObject({ type: 'error', code: 'INTERNAL' });
+
+    await subscribe(socket);
+    expect(milestonesOf(socket.messages)).toEqual([3]);
+    findUnique.mockRestore();
   });
 
   it('pushes a milestone live when a check-in completes it', async () => {
