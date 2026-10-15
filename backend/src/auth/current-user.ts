@@ -1,16 +1,23 @@
 import type { FastifyRequest } from 'fastify';
 import type { User } from '../generated/prisma/client.ts';
 import { AppError } from '../lib/errors.ts';
+import type { SessionRef } from './sessions.ts';
 
 declare module 'fastify' {
   interface FastifyRequest {
     user: User | null;
+    session: SessionRef | null;
   }
 }
 
 export function currentUser(request: FastifyRequest): User {
   if (!request.user) throw new AppError(401, 'UNAUTHENTICATED', 'Please sign in to continue');
   return request.user;
+}
+
+export function currentSession(request: FastifyRequest): SessionRef {
+  if (!request.session) throw new AppError(401, 'UNAUTHENTICATED', 'Please sign in to continue');
+  return request.session;
 }
 
 export function toUserDto(user: User) {

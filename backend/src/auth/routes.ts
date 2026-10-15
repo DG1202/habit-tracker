@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { Config } from '../config.ts';
 import type { PrismaClient } from '../db.ts';
 import { isValidTimeZone } from '../lib/dates.ts';
+import type { Hub } from '../milestones/hub.ts';
 import { currentUser, toUserDto } from './current-user.ts';
 import type { ProviderClients, ProviderName, ProviderProfile } from './providers.ts';
 import { readSessionToken, SESSION_COOKIE, sessionCookieOptions, type SessionService } from './sessions.ts';
@@ -12,6 +13,7 @@ export interface AuthRouteDeps {
   prisma: PrismaClient;
   sessions: SessionService;
   providers: ProviderClients;
+  hub: Hub;
 }
 
 const ProviderParams = z.object({ provider: z.enum(['google', 'github']) });
@@ -27,7 +29,7 @@ function upsertUser(prisma: PrismaClient, provider: ProviderName, profile: Provi
   });
 }
 
-export async function authRoutes(app: FastifyInstance, { config, prisma, sessions, providers }: AuthRouteDeps) {
+export async function authRoutes(app: FastifyInstance, { config, prisma, sessions, providers, hub }: AuthRouteDeps) {
   app.get('/auth/:provider/start', { config: AUTH_RATE_LIMIT }, async (request, reply) => {
     const { provider } = ProviderParams.parse(request.params);
     return reply.redirect(await providers[provider].authorizationUrl(request, reply));
@@ -54,6 +56,7 @@ export async function authRoutes(app: FastifyInstance, { config, prisma, session
 
   app.post('/auth/logout', { config: AUTH_RATE_LIMIT }, async (request, reply) => {
     await sessions.destroy(readSessionToken(request));
+    if (request.session) hub.closeSession(request.session.id);
     reply.clearCookie(SESSION_COOKIE, { path: '/' });
     return reply.status(204).send();
   });

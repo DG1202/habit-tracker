@@ -150,6 +150,58 @@ describe('WebSocket milestone notifications', () => {
     expect((await ctx.prisma.milestoneNotification.findUniqueOrThrow({ where: { id } })).ackedAt).not.toBeNull();
   });
 
+  it("closes a session's sockets on logout and delivers nothing further to them", async () => {
+    const habit = await createHabitWithStreak(ctx, aliceId, { days: 2, endingOn: '2026-10-14' });
+    const otherSession = await signIn(ctx, 'google');
+    const loggedOut = await connect(alice);
+    const loggedOutIdle = await connect(alice);
+    const stillIn = await connect(otherSession);
+    await subscribe(loggedOut);
+    await subscribe(stillIn);
+
+    const res = await request(ctx, alice, { method: 'POST', url: '/api/auth/logout' });
+    expect(res.statusCode).toBe(204);
+    await waitFor(() => loggedOut.closeCode !== null && loggedOutIdle.closeCode !== null);
+    expect(loggedOut.closeCode).toBe(4401);
+    expect(loggedOutIdle.closeCode).toBe(4401);
+    expect(stillIn.closeCode).toBeNull();
+
+    await request(ctx, otherSession, { method: 'POST', url: `/api/habits/${habit.id}/check-ins`, payload: {} });
+    await waitFor(() => milestonesOf(stillIn.messages).length === 1);
+    expect(milestonesOf(loggedOut.messages)).toEqual([]);
+  });
+
+  it('skips and closes the socket of an expired session while a live session still gets the milestone', async () => {
+    const expired = await connect(alice);
+    await subscribe(expired);
+
+    ctx.clock.set('2026-11-20T12:00:00.000Z');
+    const fresh = await signIn(ctx, 'google');
+    const habit = await createHabitWithStreak(ctx, aliceId, { days: 2, endingOn: '2026-11-19' });
+    const live = await connect(fresh);
+    await subscribe(live);
+    await request(ctx, fresh, { method: 'POST', url: `/api/habits/${habit.id}/check-ins`, payload: {} });
+
+    await waitFor(() => milestonesOf(live.messages).length === 1);
+    await waitFor(() => expired.closeCode !== null);
+    expect(expired.closeCode).toBe(4401);
+    expect(milestonesOf(expired.messages)).toEqual([]);
+  });
+
+  it('rejects an ack from a socket whose session has expired', async () => {
+    await createHabitWithStreak(ctx, aliceId, { days: 3, endingOn: '2026-10-15' });
+    const socket = await connect(alice);
+    await subscribe(socket);
+    const id = socket.messages.find((m) => m.type === 'milestone')!.id as string;
+
+    ctx.clock.set('2026-11-20T12:00:00.000Z');
+    socket.ws.send(JSON.stringify({ type: 'ack', id }));
+    await waitFor(() => socket.closeCode !== null);
+    expect(socket.closeCode).toBe(4401);
+    expect(socket.messages.some((m) => m.type === 'acked')).toBe(false);
+    expect((await ctx.prisma.milestoneNotification.findUniqueOrThrow({ where: { id } })).ackedAt).toBeNull();
+  });
+
   it('answers malformed messages with an error and keeps the socket open', async () => {
     const socket = await connect(alice);
     socket.ws.send('not json');

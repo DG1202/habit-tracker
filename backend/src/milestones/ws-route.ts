@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
 import { z } from 'zod';
-import { currentUser } from '../auth/current-user.ts';
+import { currentSession, currentUser } from '../auth/current-user.ts';
 import type { Config } from '../config.ts';
 import { AppError } from '../lib/errors.ts';
 import type { Hub } from './hub.ts';
@@ -43,9 +43,10 @@ export async function wsRoutes(app: FastifyInstance, { config, hub, milestones, 
     },
     (socket, request) => {
       const userId = currentUser(request).id;
-      let subscribed = false;
+      hub.add(userId, socket, currentSession(request));
 
       socket.on('message', async (raw: Buffer, isBinary: boolean) => {
+        if (!hub.isLive(userId, socket)) return;
         const message = parse(raw, isBinary);
         if (!message) {
           send(socket, { type: 'error', code: 'INVALID_MESSAGE', message: 'Expected {"type":"subscribe","topics":["milestones"]} or {"type":"ack","id":"…"}' });
@@ -53,8 +54,7 @@ export async function wsRoutes(app: FastifyInstance, { config, hub, milestones, 
         }
         try {
           if (message.type === 'subscribe') {
-            if (!subscribed) hub.add(userId, socket);
-            subscribed = true;
+            hub.subscribe(userId, socket);
             send(socket, { type: 'subscribed', topics: ['milestones'] });
             await notifier.notifyUser(userId);
           } else if (await milestones.ack(userId, message.id)) {

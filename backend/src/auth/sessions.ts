@@ -10,6 +10,11 @@ const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 const hashToken = (token: string) => createHash('sha256').update(token).digest('hex');
 
+export interface SessionRef {
+  id: string;
+  expiresAt: Date;
+}
+
 export function createSessionService(prisma: PrismaClient, clock: Clock) {
   return {
     async create(userId: string): Promise<string> {
@@ -20,7 +25,7 @@ export function createSessionService(prisma: PrismaClient, clock: Clock) {
       return token;
     },
 
-    async resolve(token: string | undefined): Promise<User | null> {
+    async resolve(token: string | undefined): Promise<{ user: User; session: SessionRef } | null> {
       if (!token) return null;
       const session = await prisma.session.findUnique({ where: { tokenHash: hashToken(token) }, include: { user: true } });
       if (!session) return null;
@@ -28,7 +33,7 @@ export function createSessionService(prisma: PrismaClient, clock: Clock) {
         await prisma.session.deleteMany({ where: { id: session.id } });
         return null;
       }
-      return session.user;
+      return { user: session.user, session: { id: session.id, expiresAt: session.expiresAt } };
     },
 
     async destroy(token: string | undefined): Promise<void> {

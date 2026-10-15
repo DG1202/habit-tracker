@@ -146,8 +146,12 @@ export async function openSocket(ctx: TestContext, cookie: string | null, origin
   const socket = { remoteAddress: '127.0.0.1' } as Socket;
   const ws = await ctx.app.injectWS('/ws', { headers: { origin, ...(cookie ? { cookie } : {}) }, socket });
   const messages: ServerMessage[] = [];
+  const client = { ws, messages, closeCode: null as number | null };
   ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
-  return { ws, messages };
+  ws.on('close', (code) => {
+    client.closeCode = code;
+  });
+  return client;
 }
 
 export async function waitFor(predicate: () => boolean, timeoutMs = 1000): Promise<void> {

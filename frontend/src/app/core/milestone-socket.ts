@@ -1,4 +1,5 @@
 import { inject, Injectable, InjectionToken, signal } from '@angular/core';
+import { AuthStore } from './auth-store';
 import type { MilestoneMessage } from './models';
 import { ToastService } from './toast-service';
 
@@ -10,12 +11,15 @@ export const WEB_SOCKET_FACTORY = new InjectionToken<(url: string) => WebSocket>
 export type SocketStatus = 'disconnected' | 'connecting' | 'connected';
 
 const OPEN = 1;
+// Must match SESSION_ENDED_CLOSE_CODE in backend/src/milestones/hub.ts.
+const SESSION_ENDED = 4401;
 const MAX_BACKOFF_MS = 30_000;
 
 @Injectable({ providedIn: 'root' })
 export class MilestoneSocket {
   private readonly createSocket = inject(WEB_SOCKET_FACTORY);
   private readonly toasts = inject(ToastService);
+  private readonly auth = inject(AuthStore);
   private readonly state = signal<SocketStatus>('disconnected');
   private socket: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -54,11 +58,12 @@ export class MilestoneSocket {
     socket.onmessage = (event: MessageEvent) => {
       if (this.socket === socket) this.handle(event.data);
     };
-    socket.onclose = () => {
+    socket.onclose = (event: CloseEvent) => {
       if (this.socket !== socket) return;
       this.socket = null;
       this.state.set('disconnected');
-      if (this.active) this.scheduleReconnect();
+      if (event.code === SESSION_ENDED) this.auth.clear();
+      else if (this.active) this.scheduleReconnect();
     };
   }
 

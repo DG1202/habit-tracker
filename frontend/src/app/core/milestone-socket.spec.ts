@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
+import { AuthStore } from './auth-store';
 import { MilestoneSocket, WEB_SOCKET_FACTORY } from './milestone-socket';
 import { ToastService } from './toast-service';
 
@@ -9,7 +10,7 @@ class FakeSocket {
   sent: unknown[] = [];
   onopen: (() => void) | null = null;
   onmessage: ((event: { data: string }) => void) | null = null;
-  onclose: (() => void) | null = null;
+  onclose: ((event: { code: number }) => void) | null = null;
 
   constructor(readonly url: string) {
     FakeSocket.instances.push(this);
@@ -17,9 +18,9 @@ class FakeSocket {
   send(data: string) {
     this.sent.push(JSON.parse(data));
   }
-  close() {
+  close(code = 1006) {
     this.readyState = 3;
-    this.onclose?.();
+    this.onclose?.({ code });
   }
   open() {
     this.readyState = 1;
@@ -33,13 +34,18 @@ class FakeSocket {
 describe('MilestoneSocket', () => {
   let socket: MilestoneSocket;
   let toasts: ToastService;
+  let auth: { clear: ReturnType<typeof vi.fn> };
   const latest = () => FakeSocket.instances.at(-1)!;
 
   beforeEach(() => {
     FakeSocket.instances = [];
     vi.useFakeTimers();
+    auth = { clear: vi.fn() };
     TestBed.configureTestingModule({
-      providers: [{ provide: WEB_SOCKET_FACTORY, useValue: (url: string) => new FakeSocket(url) as unknown as WebSocket }],
+      providers: [
+        { provide: WEB_SOCKET_FACTORY, useValue: (url: string) => new FakeSocket(url) as unknown as WebSocket },
+        { provide: AuthStore, useValue: auth },
+      ],
     });
     socket = TestBed.inject(MilestoneSocket);
     toasts = TestBed.inject(ToastService);
@@ -88,6 +94,24 @@ describe('MilestoneSocket', () => {
     expect(FakeSocket.instances).toHaveLength(2);
     vi.advanceTimersByTime(1);
     expect(FakeSocket.instances).toHaveLength(3);
+  });
+
+  it('clears the session and does not reconnect when the server ends the session (4401)', () => {
+    socket.connect();
+    latest().open();
+    latest().close(4401);
+    expect(auth.clear).toHaveBeenCalledTimes(1);
+    expect(socket.status()).toBe('disconnected');
+
+    vi.advanceTimersByTime(60_000);
+    expect(FakeSocket.instances).toHaveLength(1);
+  });
+
+  it('does not clear the session on an ordinary drop', () => {
+    socket.connect();
+    latest().open();
+    latest().close();
+    expect(auth.clear).not.toHaveBeenCalled();
   });
 
   it('stops reconnecting after disconnect', () => {

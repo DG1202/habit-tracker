@@ -73,18 +73,21 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   const sessions = createSessionService(deps.prisma, clock);
   app.decorateRequest('user', null);
+  app.decorateRequest('session', null);
   app.addHook('onRequest', async (request) => {
     if (MUTATING_METHODS.has(request.method) && request.headers.origin !== config.APP_ORIGIN) {
       throw new AppError(403, 'FORBIDDEN_ORIGIN', 'Request origin is not allowed');
     }
-    request.user = await sessions.resolve(readSessionToken(request));
+    const resolved = await sessions.resolve(readSessionToken(request));
+    request.user = resolved?.user ?? null;
+    request.session = resolved?.session ?? null;
   });
 
+  const hub = createHub(clock);
   const providers = deps.providers ?? (await registerOAuthProviders(app, config));
-  await app.register(authRoutes, { prefix: '/api', config, prisma: deps.prisma, sessions, providers });
+  await app.register(authRoutes, { prefix: '/api', config, prisma: deps.prisma, sessions, providers, hub });
 
   const habits = createHabitService(deps.prisma, clock);
-  const hub = createHub();
   const milestones = createMilestoneService(deps.prisma, clock);
   const notifier = createMilestoneNotifier(hub, milestones);
   const checkIns = createCheckInService(deps.prisma, clock, habits, (userId) =>
