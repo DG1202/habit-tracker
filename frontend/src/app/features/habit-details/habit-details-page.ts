@@ -38,6 +38,7 @@ import { buildMonthGrid } from './month-grid';
     .day { aspect-ratio: 1; display: grid; place-items: center; border-radius: var(--radius-sm); font-size: var(--text-sm); background: var(--color-bg); }
     .day.checked { background: var(--color-success); color: var(--color-on-accent); font-weight: 700; }
     .day.today { box-shadow: inset 0 0 0 2px var(--color-primary); }
+    .day.today.checked { box-shadow: inset 0 0 0 2px var(--color-text), inset 0 0 0 4px var(--color-on-accent); }
     .day.future { color: var(--color-muted); background: transparent; }
     @media (max-width: 600px) { .stat dd { font-size: 1.5rem; } .header, .calendar { padding: var(--space-4); } }
   `,
