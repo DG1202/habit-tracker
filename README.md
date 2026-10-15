@@ -152,8 +152,9 @@ returns `404` (existence is not revealed).
 
 ## WebSocket
 
-Endpoint: `ws://localhost:4300/ws`. Requires the session cookie and `Origin: http://localhost:4300`; otherwise
-the upgrade is rejected.
+Endpoint: `ws://localhost:4300/ws`. Requires `Origin: http://localhost:4300`; otherwise the upgrade is rejected
+with HTTP 403. An upgrade without a valid session cookie (missing, forged or expired) is accepted and immediately
+closed with code `4401`, with no frames sent, so the client signs out instead of retrying.
 
 Client → server:
 

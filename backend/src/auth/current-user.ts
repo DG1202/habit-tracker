@@ -15,11 +15,6 @@ export function currentUser(request: FastifyRequest): User {
   return request.user;
 }
 
-export function currentSession(request: FastifyRequest): SessionRef {
-  if (!request.session) throw new AppError(401, 'UNAUTHENTICATED', 'Please sign in to continue');
-  return request.session;
-}
-
 export function toUserDto(user: User) {
   return {
     id: user.id,

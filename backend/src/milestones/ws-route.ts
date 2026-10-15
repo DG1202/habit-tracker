@@ -1,10 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
 import { z } from 'zod';
-import { currentSession, currentUser } from '../auth/current-user.ts';
 import type { Config } from '../config.ts';
 import { AppError } from '../lib/errors.ts';
-import type { Hub } from './hub.ts';
+import { SESSION_ENDED_CLOSE_CODE, type Hub } from './hub.ts';
 import type { MilestoneNotifier, MilestoneService } from './service.ts';
 
 const ClientMessage = z.discriminatedUnion('type', [
@@ -38,12 +37,16 @@ export async function wsRoutes(app: FastifyInstance, { config, hub, milestones, 
       websocket: true,
       preValidation: async (request) => {
         if (request.headers.origin !== config.APP_ORIGIN) throw new AppError(403, 'FORBIDDEN_ORIGIN', 'Origin not allowed');
-        currentUser(request);
       },
     },
     (socket, request) => {
-      const userId = currentUser(request).id;
-      hub.add(userId, socket, currentSession(request));
+      // Browsers only expose close codes, so a missing or expired session is reported as 4401 after the upgrade.
+      if (!request.user || !request.session) {
+        socket.close(SESSION_ENDED_CLOSE_CODE, 'Session ended');
+        return;
+      }
+      const userId = request.user.id;
+      hub.add(userId, socket, request.session);
 
       socket.on('message', async (raw: Buffer, isBinary: boolean) => {
         if (!hub.isLive(userId, socket)) return;

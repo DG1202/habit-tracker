@@ -30,7 +30,7 @@ describe('WebSocket milestone notifications', () => {
     await ctx.close();
   });
 
-  const connect = async (cookie: string) => {
+  const connect = async (cookie: string | null) => {
     const socket = await openSocket(ctx, cookie);
     sockets.push(socket);
     return socket;
@@ -224,8 +224,22 @@ describe('WebSocket milestone notifications', () => {
     await subscribe(socket);
   });
 
-  it('rejects connections without a session or from another origin', async () => {
-    await expect(openSocket(ctx, null)).rejects.toThrow('Unexpected server response: 401');
+  it('accepts an upgrade without a valid session only to close it with 4401 and no frames', async () => {
+    await createHabitWithStreak(ctx, aliceId, { days: 3, endingOn: '2026-10-15' });
+    const expiring = await signIn(ctx, 'google');
+    ctx.clock.set('2026-11-20T12:00:00.000Z');
+
+    for (const cookie of [null, 'sid=forged.value', expiring]) {
+      const socket = await connect(cookie);
+      await waitFor(() => socket.closeCode !== null);
+      expect(socket.closeCode).toBe(4401);
+      expect(socket.messages).toEqual([]);
+    }
+    expect(await ctx.prisma.milestoneNotification.count()).toBe(0);
+  });
+
+  it('still rejects an upgrade from another origin with 403, with or without a session', async () => {
     await expect(openSocket(ctx, alice, 'https://evil.example.test')).rejects.toThrow('Unexpected server response: 403');
+    await expect(openSocket(ctx, null, 'https://evil.example.test')).rejects.toThrow('Unexpected server response: 403');
   });
 });
