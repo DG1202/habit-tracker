@@ -20,3 +20,6 @@ a { color: var(--color-primary); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .page:focus-visible { outline: none; }
 .page { max-width: 1040px; margin: 0 auto; padding: var(--space-5) var(--space-4) calc(var(--space-7) + var(--toast-stack-h, 0px)); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
