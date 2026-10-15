@@ -1,0 +1,63 @@
+<a routerLink="/" class="back">← All habits</a>
+
+@if (loading() && !habit()) {
+  <div class="loading" aria-busy="true"><div class="spinner" aria-label="Loading habit"></div></div>
+} @else if (error(); as message) {
+  <ht-error-banner [message]="message" (retry)="load()" />
+} @else if (habit(); as habit) {
+  <div class="details">
+    <section class="card header">
+      <div class="title">
+        <h1>{{ habit.name }}</h1>
+        <span class="badge" [attr.data-status]="habit.status">{{ statusLabels[habit.status] }}</span>
+      </div>
+      @if (habit.description) {
+        <p>{{ habit.description }}</p>
+      }
+      <p class="muted meta">Started {{ habit.startDate }}</p>
+      @if (habit.status === 'ACTIVE') {
+        <div>
+          @if (habit.stats.checkedInToday) {
+            <button type="button" class="btn btn-success-soft" [disabled]="busy()" (click)="undo()">✓ Done today · Undo</button>
+          } @else {
+            <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="checkIn()">Check in for today</button>
+          }
+        </div>
+      } @else {
+        <p class="muted meta">{{ habit.status === 'PAUSED' ? 'Paused habits cannot be checked in.' : 'Archived habits are read-only.' }}</p>
+      }
+    </section>
+
+    <dl class="stats">
+      <div class="card stat"><dt>Current streak</dt><dd>🔥 {{ habit.stats.currentStreak }}</dd></div>
+      <div class="card stat"><dt>Best streak</dt><dd>{{ habit.stats.bestStreak }}</dd></div>
+      <div class="card stat"><dt>Total check-ins</dt><dd>{{ habit.stats.totalCheckIns }}</dd></div>
+    </dl>
+
+    @if (habit.stats.totalCheckIns === 0) {
+      <ht-empty-state icon="📅" title="No check-ins yet" message="Check in today to start your first streak." />
+    } @else {
+      <section class="card calendar" aria-labelledby="calendar-title">
+        <h2 id="calendar-title">{{ monthLabel() }}</h2>
+        <div class="grid" role="grid">
+          @for (weekday of weekdays; track weekday) {
+            <div class="weekday" role="columnheader">{{ weekday }}</div>
+          }
+          @for (week of weeks(); track $index) {
+            @for (cell of week; track $index) {
+              @if (cell) {
+                <div class="day" role="gridcell" [class.checked]="cell.checked" [class.today]="cell.isToday" [class.future]="cell.isFuture"
+                     [attr.aria-label]="cell.date + (cell.checked ? ', checked in' : '')">{{ cell.day }}</div>
+              } @else {
+                <div role="gridcell" aria-hidden="true"></div>
+              }
+            }
+          }
+        </div>
+        @if (month()?.dates?.length === 0) {
+          <p class="muted meta">No check-ins this month yet.</p>
+        }
+      </section>
+    }
+  </div>
+}

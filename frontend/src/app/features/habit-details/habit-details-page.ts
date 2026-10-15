@@ -1,0 +1,105 @@
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, type OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
+import { forkJoin, type Observable } from 'rxjs';
+import { finalize } from 'rxjs/operators';
+import { toApiError } from '../../core/api-error';
+import { HabitsApi } from '../../core/habits-api';
+import type { Habit, MonthCheckIns } from '../../core/models';
+import { ToastService } from '../../core/toast-service';
+import { EmptyState } from '../../shared/empty-state';
+import { ErrorBanner } from '../../shared/error-banner';
+import { STATUS_LABELS } from '../habits/habit-row';
+import { buildMonthGrid } from './month-grid';
+
+@Component({
+  selector: 'ht-habit-details-page',
+  imports: [RouterLink, EmptyState, ErrorBanner],
+  templateUrl: './habit-details-page.html',
+  styles: `
+    .back { display: inline-block; margin-bottom: var(--space-4); font-size: var(--text-sm); }
+    .loading { display: grid; place-items: center; padding: var(--space-7); }
+    .details { display: flex; flex-direction: column; gap: var(--space-5); }
+    .header { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+    .title { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+    .meta { font-size: var(--text-sm); }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+    .stat { padding: var(--space-4); text-align: center; }
+    .stat dt { font-size: var(--text-sm); color: var(--color-muted); }
+    .stat dd { margin: var(--space-1) 0 0; font-size: 2rem; font-weight: 700; }
+    .calendar { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+    .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--space-1); }
+    .weekday { text-align: center; font-size: var(--text-xs); color: var(--color-muted); font-weight: 600; }
+    .day { aspect-ratio: 1; display: grid; place-items: center; border-radius: var(--radius-sm); font-size: var(--text-sm); background: var(--color-bg); }
+    .day.checked { background: var(--color-success); color: #fff; font-weight: 700; }
+    .day.today { box-shadow: inset 0 0 0 2px var(--color-primary); }
+    .day.future { color: #b3bacb; background: transparent; }
+    @media (max-width: 600px) { .stat dd { font-size: 1.5rem; } .header, .calendar { padding: var(--space-4); } }
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class HabitDetailsPage implements OnInit {
+  readonly id = input.required<string>();
+
+  private readonly api = inject(HabitsApi);
+  private readonly toasts = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  protected readonly habit = signal<Habit | null>(null);
+  protected readonly month = signal<MonthCheckIns | null>(null);
+  protected readonly loading = signal(true);
+  protected readonly error = signal<string | null>(null);
+  protected readonly busy = signal(false);
+  protected readonly statusLabels = STATUS_LABELS;
+  protected readonly weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  protected readonly weeks = computed(() => {
+    const month = this.month();
+    return month ? buildMonthGrid(month.month, month.dates, month.today) : [];
+  });
+
+  protected readonly monthLabel = computed(() => {
+    const month = this.month()?.month;
+    return month ? new Date(`${month}-01T00:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
+  });
+
+  ngOnInit(): void {
+    this.load();
+  }
+
+  protected load(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    forkJoin({ habit: this.api.get(this.id()), month: this.api.month(this.id()) })
+      .pipe(
+        finalize(() => this.loading.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: ({ habit, month }) => {
+          this.habit.set(habit);
+          this.month.set(month);
+        },
+        error: (err: unknown) => {
+          const error = toApiError(err);
+          this.error.set(error.status === 404 ? 'This habit does not exist or is not yours.' : error.message);
+        },
+      });
+  }
+
+  protected checkIn(): void {
+    this.mutate(this.api.checkIn(this.id()));
+  }
+
+  protected undo(): void {
+    this.mutate(this.api.undoCheckIn(this.id()));
+  }
+
+  private mutate(request: Observable<unknown>): void {
+    this.busy.set(true);
+    request.pipe(finalize(() => this.busy.set(false))).subscribe({
+      complete: () => this.load(),
+      error: (err: unknown) => this.toasts.error(toApiError(err).message),
+    });
+  }
+}
