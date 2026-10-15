@@ -3,9 +3,6 @@
 Track daily habits, see current and best streaks, and get real-time milestone notifications at 3, 7 and 30
 days. Sign-in is SSO only (Google or GitHub). Every user sees only their own data.
 
-- Brief: [`docs/TASK.md`](docs/TASK.md)
-- Design spec: [`docs/superpowers/specs/2026-10-15-habit-tracker-design.md`](docs/superpowers/specs/2026-10-15-habit-tracker-design.md)
-
 | Layer | Tech |
 |---|---|
 | Frontend | Angular 22 (standalone components, signals, zoneless), plain SCSS, light theme |
@@ -136,7 +133,19 @@ All endpoints are under `/api`, JSON, and require a session unless noted.
 | `DELETE /habits/:id/check-ins/today` | Undo today's check-in |
 
 Errors: `{ "error": { "code": "CHECKIN_EXISTS", "message": "…", "details": [] } }`. Another user's habit
-returns `404` (existence is not revealed). Full code list in the spec §5.
+returns `404` (existence is not revealed).
+
+| Status | Codes |
+|---|---|
+| 400 | `VALIDATION_ERROR`, `BAD_REQUEST` |
+| 401 | `UNAUTHENTICATED` |
+| 403 | `FORBIDDEN_ORIGIN` |
+| 404 | `NOT_FOUND` |
+| 409 | `HABIT_ARCHIVED`, `HABIT_NOT_ARCHIVED`, `HABIT_NOT_ACTIVE`, `CHECKIN_EXISTS` |
+| 413 / 415 | `BAD_REQUEST` (body too large), `UNSUPPORTED_MEDIA_TYPE` |
+| 422 | `DATE_IN_FUTURE`, `BACKFILL_NOT_SUPPORTED`, `BEFORE_START_DATE`, `START_DATE_AFTER_CHECKINS` |
+| 429 | `RATE_LIMITED` |
+| 500 | `INTERNAL` |
 
 ## WebSocket
 
