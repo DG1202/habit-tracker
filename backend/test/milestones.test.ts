@@ -300,4 +300,9 @@ describe('WebSocket milestone notifications', () => {
     await expect(openSocket(ctx, alice, 'https://evil.example.test')).rejects.toThrow('Unexpected server response: 403');
     await expect(openSocket(ctx, null, 'https://evil.example.test')).rejects.toThrow('Unexpected server response: 403');
   });
+
+  it('rejects an upgrade with no Origin header with 403, with or without a session', async () => {
+    await expect(openSocket(ctx, alice, null)).rejects.toThrow('Unexpected server response: 403');
+    await expect(openSocket(ctx, null, null)).rejects.toThrow('Unexpected server response: 403');
+  });
 });
