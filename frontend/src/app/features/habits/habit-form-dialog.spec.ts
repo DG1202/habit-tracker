@@ -130,8 +130,13 @@ describe('HabitFormDialog', () => {
     await fixture.whenStable();
     expect(closed).not.toHaveBeenCalled();
 
+    el().querySelector('dialog')!.dispatchEvent(new Event('cancel', { cancelable: true }));
+    await fixture.whenStable();
+    expect(closed).not.toHaveBeenCalled();
+
     pending.next(HABIT);
     pending.complete();
+    expect(saved).toHaveBeenCalledTimes(1);
     expect(saved).toHaveBeenCalledWith(HABIT);
   });
 });
