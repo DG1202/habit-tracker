@@ -119,6 +119,18 @@ describe('WebSocket milestone notifications', () => {
     expect(milestonesOf(tabC.messages)).toEqual([]);
   });
 
+  it('delivers nothing to a connected socket that never subscribed', async () => {
+    const habit = await createHabitWithStreak(ctx, aliceId, { days: 2, endingOn: '2026-10-14' });
+    const idle = await connect(alice);
+    const subscribed = await connect(alice);
+    await subscribe(subscribed);
+
+    await request(ctx, alice, { method: 'POST', url: `/api/habits/${habit.id}/check-ins`, payload: {} });
+    await waitFor(() => milestonesOf(subscribed.messages).length === 1);
+    await roundTrip(idle);
+    expect(milestonesOf(idle.messages)).toEqual([]);
+  });
+
   it("never delivers another user's milestones", async () => {
     const bob = await signIn(ctx, 'github');
     const bobSocket = await connect(bob);
