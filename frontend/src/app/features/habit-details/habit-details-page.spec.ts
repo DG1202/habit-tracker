@@ -157,6 +157,20 @@ describe('HabitDetailsPage', () => {
     expect(root().querySelector('h1')!.textContent).toBe('Walk 5,000 steps');
   });
 
+  it("does not let the previous habit's slow responses overwrite the new one", async () => {
+    const staleHabit = http.expectOne('/api/habits/h1');
+    const staleMonth = http.expectOne('/api/habits/h1/check-ins');
+    fixture.componentRef.setInput('id', 'h2');
+    await fixture.whenStable();
+    http.expectOne('/api/habits/h2').flush({ ...HABIT, id: 'h2', name: 'Walk 5,000 steps' });
+    http.expectOne('/api/habits/h2/check-ins').flush(MONTH);
+    await fixture.whenStable();
+
+    expect(staleHabit.cancelled).toBe(true);
+    expect(staleMonth.cancelled).toBe(true);
+    expect(root().querySelector('h1')!.textContent).toBe('Walk 5,000 steps');
+  });
+
   it('cancels a pending action when the page is destroyed', async () => {
     await flushLoad(HABIT);
     button('Check in for today').click();
