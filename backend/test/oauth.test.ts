@@ -88,6 +88,15 @@ describe.each(['google', 'github'] as const)('real %s OAuth state and PKCE handl
     }
   });
 
+  it('treats a repeated error parameter as a failed sign-in', async () => {
+    const { cookie } = await start();
+    const res = await ctx.app.inject({ method: 'GET', url: `/api/auth/${provider}/callback?error=access_denied&error=x`, headers: { cookie } });
+
+    expect(res.statusCode).toBe(302);
+    expect(res.headers.location).toBe(`${ORIGIN}/login?error=sso_failed`);
+    expect(res.cookies.filter((c) => c.name === STATE_COOKIE || c.name === VERIFIER_COOKIE).map((c) => c.value)).toEqual(['', '']);
+  });
+
   it('sends the PKCE verifier to the token endpoint only after the state matches', async () => {
     const { location, verifier, cookie } = await start();
     const state = location.searchParams.get('state')!;

@@ -1,8 +1,15 @@
 import type { WebSocket } from 'ws';
 import type { SessionRef } from '../auth/sessions.ts';
 import type { Clock } from '../lib/clock.ts';
+import type { MilestoneMessage } from './service.ts';
 
 export const SESSION_ENDED_CLOSE_CODE = 4401;
+
+export type ServerFrame =
+  | MilestoneMessage
+  | { type: 'subscribed'; topics: ['milestones'] }
+  | { type: 'acked'; id: string }
+  | { type: 'error'; code: 'INVALID_MESSAGE' | 'RATE_LIMITED' | 'NOT_FOUND' | 'INTERNAL'; message: string };
 
 interface Connection {
   session: SessionRef;
@@ -63,7 +70,7 @@ export function createHub(clock: Clock) {
       return subscribers(userId).length > 0;
     },
     // Returns how many sockets the message was written to.
-    send(userId: string, message: object): number {
+    send(userId: string, message: ServerFrame): number {
       const data = JSON.stringify(message);
       let sent = 0;
       for (const socket of subscribers(userId)) {

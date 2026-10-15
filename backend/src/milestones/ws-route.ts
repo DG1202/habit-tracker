@@ -5,7 +5,7 @@ import { isAllowedOrigin, type Config } from '../config.ts';
 import type { Clock } from '../lib/clock.ts';
 import { AppError } from '../lib/errors.ts';
 import { createTokenBucket } from '../lib/token-bucket.ts';
-import { SESSION_ENDED_CLOSE_CODE, type Hub } from './hub.ts';
+import { SESSION_ENDED_CLOSE_CODE, type Hub, type ServerFrame } from './hub.ts';
 import type { MilestoneNotifier, MilestoneService } from './service.ts';
 
 const ClientMessage = z.discriminatedUnion('type', [
@@ -17,7 +17,7 @@ const FRAME_RATE = { capacity: 20, refillPerSecond: 5 };
 const MAX_CONSECUTIVE_LIMITED = 10;
 const RATE_LIMITED_CLOSE_CODE = 1008;
 
-const send = (socket: WebSocket, message: object) => socket.send(JSON.stringify(message));
+const send = (socket: WebSocket, message: ServerFrame) => socket.send(JSON.stringify(message));
 
 function parse(raw: Buffer, isBinary: boolean) {
   if (isBinary) return null;
@@ -76,21 +76,25 @@ export async function wsRoutes(app: FastifyInstance, { config, clock, hub, miles
           return;
         }
         try {
-          if (message.type === 'subscribe') {
-            if (!subscribed) {
-              hub.subscribe(userId, socket);
-              subscribed = notifier.notifyUser(userId).catch((error: unknown) => {
-                subscribed = null;
-                throw error;
-              });
-            }
-            // Sent last so clients (and tests) can treat it as "pending milestones have been delivered".
-            await subscribed;
-            send(socket, { type: 'subscribed', topics: ['milestones'] });
-          } else if (await milestones.ack(userId, message.id)) {
-            send(socket, { type: 'acked', id: message.id });
-          } else {
-            send(socket, { type: 'error', code: 'NOT_FOUND', message: 'Notification not found' });
+          switch (message.type) {
+            case 'subscribe':
+              if (!subscribed) {
+                hub.subscribe(userId, socket);
+                subscribed = notifier.notifyUser(userId).catch((error: unknown) => {
+                  subscribed = null;
+                  throw error;
+                });
+              }
+              // Sent last so clients (and tests) can treat it as "pending milestones have been delivered".
+              await subscribed;
+              send(socket, { type: 'subscribed', topics: ['milestones'] });
+              break;
+            case 'ack':
+              if (await milestones.ack(userId, message.id)) send(socket, { type: 'acked', id: message.id });
+              else send(socket, { type: 'error', code: 'NOT_FOUND', message: 'Notification not found' });
+              break;
+            default:
+              message satisfies never;
           }
         } catch (error) {
           request.log.error({ err: error }, 'WebSocket message handling failed');
