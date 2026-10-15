@@ -7,7 +7,7 @@ import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import websocket from '@fastify/websocket';
-import { currentUser } from './auth/current-user.ts';
+import { bindUserToLog, currentUser } from './auth/current-user.ts';
 import { registerOAuthProviders, type ProviderClients } from './auth/providers.ts';
 import { authRoutes } from './auth/routes.ts';
 import { createSessionService, readSessionToken } from './auth/sessions.ts';
@@ -75,13 +75,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await sessions.pruneExpired();
   app.decorateRequest('user', null);
   app.decorateRequest('session', null);
-  app.addHook('onRequest', async (request) => {
+  app.addHook('onRequest', async (request, reply) => {
     if (MUTATING_METHODS.has(request.method) && !isAllowedOrigin(request.headers.origin, config)) {
       throw new AppError(403, 'FORBIDDEN_ORIGIN', 'Request origin is not allowed');
     }
     const resolved = await sessions.resolve(readSessionToken(request));
     request.user = resolved?.user ?? null;
     request.session = resolved?.session ?? null;
+    if (resolved) bindUserToLog(request, reply, resolved.user.id);
   });
 
   const hub = createHub(clock);

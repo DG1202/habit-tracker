@@ -226,6 +226,7 @@ Client behavior (`frontend/src/app/core/milestone-socket.ts`):
 - A successful sign-in revokes the browser's previous session (and closes its sockets), whichever user it belonged to.
 - Mutating requests and WS upgrades require `Origin == APP_ORIGIN` (CSRF / cross-site WebSocket protection); `Origin: null` is always rejected.
 - Every habit/check-in query is scoped to the session user.
+- Request logs carry the user id of authenticated requests, and sign-in (with provider) and sign-out are logged. Logs never contain tokens, OAuth codes, emails or names.
 - zod validation on all inputs, 16 KB body limit, `helmet` headers, rate limiting on SSO and logout routes.
 - Local run is plain HTTP; production must use HTTPS with `NODE_ENV=production`.
 

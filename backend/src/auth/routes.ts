@@ -4,7 +4,7 @@ import type { Config } from '../config.ts';
 import type { PrismaClient } from '../db.ts';
 import { isValidTimeZone } from '../lib/dates.ts';
 import type { Hub } from '../milestones/hub.ts';
-import { currentUser, toUserDto } from './current-user.ts';
+import { bindUserToLog, currentUser, toUserDto } from './current-user.ts';
 import { clearOAuthCookies, type ProviderClients, type ProviderName, type ProviderProfile } from './providers.ts';
 import { readSessionToken, SESSION_COOKIE, sessionCookieOptions, type SessionService } from './sessions.ts';
 
@@ -54,6 +54,8 @@ export async function authRoutes(app: FastifyInstance, { config, prisma, session
         hub.closeSession(request.session.id);
       }
       reply.setCookie(SESSION_COOKIE, await sessions.create(user.id), sessionCookieOptions(config));
+      bindUserToLog(request, reply, user.id);
+      request.log.info({ provider }, 'Signed in');
       return reply.redirect(`${config.APP_ORIGIN}/`);
     } catch (err) {
       request.log.warn({ provider, reason: err instanceof Error ? err.name : 'unknown' }, 'SSO callback failed');
@@ -67,6 +69,7 @@ export async function authRoutes(app: FastifyInstance, { config, prisma, session
     await sessions.destroy(readSessionToken(request));
     if (request.session) hub.closeSession(request.session.id);
     reply.clearCookie(SESSION_COOKIE, { path: '/' });
+    request.log.info('Signed out');
     return reply.status(204).send();
   });
 
