@@ -32,4 +32,15 @@ describe('dates', () => {
     expect(addDays('2024-02-28', 1)).toBe('2024-02-29');
     expect(addDays('2026-01-01', -1)).toBe('2025-12-31');
   });
+
+  it('keeps local dates right across DST changes and leap days', () => {
+    expect(todayIn('Europe/Kyiv', new Date('2026-03-29T00:30:00Z'))).toBe('2026-03-29');
+    expect(todayIn('Europe/Kyiv', new Date('2026-03-29T21:30:00Z'))).toBe('2026-03-30');
+    expect(todayIn('America/Los_Angeles', new Date('2026-11-01T07:30:00Z'))).toBe('2026-11-01');
+    expect(todayIn('America/Los_Angeles', new Date('2026-11-02T07:30:00Z'))).toBe('2026-11-01');
+    expect(todayIn('Asia/Tokyo', new Date('2024-02-29T14:59:59Z'))).toBe('2024-02-29');
+    expect(todayIn('Asia/Tokyo', new Date('2024-02-29T15:00:00Z'))).toBe('2024-03-01');
+    expect(addDays('2026-03-28', 1)).toBe('2026-03-29');
+    expect(addDays('2024-03-01', -1)).toBe('2024-02-29');
+  });
 });

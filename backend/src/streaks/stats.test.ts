@@ -43,4 +43,8 @@ describe('computeStats', () => {
       checkedInToday: true,
     });
   });
+
+  it('counts a streak across a leap day', () => {
+    expect(computeStats(['2024-02-28', '2024-02-29', '2024-03-01'], '2024-03-01')).toMatchObject({ currentStreak: 3, bestStreak: 3 });
+  });
 });
