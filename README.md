@@ -188,7 +188,7 @@ Milestone rules:
 - Session token stored only as a SHA-256 hash; cookie is `HttpOnly`, `SameSite=Lax`, `Secure` in production.
 - Mutating requests and WS upgrades require `Origin == APP_ORIGIN` (CSRF / cross-site WebSocket protection).
 - Every habit/check-in query is scoped to the session user.
-- zod validation on all inputs, 16 KB body limit, `helmet` headers, rate limiting on auth routes.
+- zod validation on all inputs, 16 KB body limit, `helmet` headers, rate limiting on SSO and logout routes.
 - Local run is plain HTTP; production must use HTTPS with `NODE_ENV=production`.
 
 ## Demo data
