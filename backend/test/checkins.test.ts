@@ -75,9 +75,9 @@ describe('check-ins API', () => {
     const habit = await createHabitWithStreak(ctx, aliceId, { days: 0, endingOn: '2026-10-15' });
 
     await request(ctx, alice, { method: 'PUT', url: '/api/me/timezone', payload: { timezone: 'Europe/Kyiv' } });
-    await checkIn(alice, habit.id);
+    expect((await checkIn(alice, habit.id)).statusCode).toBe(201);
     await request(ctx, alice, { method: 'PUT', url: '/api/me/timezone', payload: { timezone: 'America/New_York' } });
-    await checkIn(alice, habit.id);
+    expect((await checkIn(alice, habit.id)).statusCode).toBe(201);
 
     const dates = (await ctx.prisma.checkIn.findMany({ orderBy: { date: 'asc' } })).map((c) => c.date);
     expect(dates).toEqual(['2026-10-15', '2026-10-16']);
@@ -100,7 +100,7 @@ describe('check-ins API', () => {
 
   it("does not let another user touch someone else's check-ins", async () => {
     const bob = await signIn(ctx, 'github');
-    const habit = await createHabitWithStreak(ctx, aliceId, { days: 1, endingOn: '2026-10-14' });
+    const habit = await createHabitWithStreak(ctx, aliceId, { days: 1, endingOn: '2026-10-15' });
 
     for (const res of [
       await checkIn(bob, habit.id),
@@ -110,5 +110,6 @@ describe('check-ins API', () => {
       expect(res.statusCode).toBe(404);
     }
     expect(await ctx.prisma.checkIn.count()).toBe(1);
+    expect(await ctx.prisma.checkIn.findFirst({ where: { habitId: habit.id, date: '2026-10-15' } })).not.toBeNull();
   });
 });
