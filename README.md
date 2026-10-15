@@ -39,6 +39,16 @@ Sign in locally with **Chrome or Firefox**. The OAuth cookies use the `__Host-` 
 `Secure`; Chrome and Firefox treat `http://localhost` as secure, but Safari may reject these cookies over plain
 HTTP, so sign-in fails there.
 
+To run the backend in production mode, install runtime dependencies only (`prisma` and `tsx` are runtime
+dependencies, so this is enough to generate the client, migrate and start):
+
+```bash
+cd backend
+yarn workspaces focus --production
+yarn prisma migrate deploy
+yarn start                    # reads backend/.env; set NODE_ENV=production and serve behind HTTPS
+```
+
 ## Run tests
 
 ```bash

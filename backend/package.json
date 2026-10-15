@@ -24,13 +24,13 @@
     "@prisma/adapter-better-sqlite3": "7.10.1",
     "@prisma/client": "7.10.1",
     "fastify": "^5.12",
+    "prisma": "7.10.1",
+    "tsx": "^4.23",
     "zod": "^4.6"
   },
   "devDependencies": {
     "@types/node": "^24",
     "@types/ws": "^8",
-    "prisma": "7.10.1",
-    "tsx": "^4.23",
     "typescript": "~6.0.0",
     "vitest": "^4.1"
   }
