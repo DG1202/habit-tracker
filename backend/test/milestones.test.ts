@@ -248,6 +248,17 @@ describe('WebSocket milestone notifications', () => {
     await roundTrip(other);
   });
 
+  it('accepts frames up to 4 KB and closes the socket with 1009 on a larger one', async () => {
+    const socket = await connect(alice);
+    socket.ws.send('x'.repeat(4096));
+    await waitFor(() => socket.messages.length === 1);
+    expect(socket.messages[0]).toMatchObject({ type: 'error', code: 'INVALID_MESSAGE' });
+
+    socket.ws.send('x'.repeat(4097));
+    await waitFor(() => socket.closeCode !== null);
+    expect(socket.closeCode).toBe(1009);
+  });
+
   it('rejects an ack from a socket whose session has expired', async () => {
     await createHabitWithStreak(ctx, aliceId, { days: 3, endingOn: '2026-10-15' });
     const socket = await connect(alice);

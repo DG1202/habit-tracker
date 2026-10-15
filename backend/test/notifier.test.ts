@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { PrismaClient } from '../src/db.ts';
 import type { Hub } from '../src/milestones/hub.ts';
 import { createMilestoneNotifier, createMilestoneService } from '../src/milestones/service.ts';
 import { createHabitWithStreak, createTestContext, signIn, userIdOf, type TestContext } from './helpers.ts';
@@ -63,5 +64,23 @@ describe('milestone notifier', () => {
     await notifier.notifyUser(userId);
     expect(delivered).toHaveLength(1);
     expect(await ctx.prisma.milestoneNotification.count()).toBe(1);
+  });
+
+  it('skips a milestone another evaluation recorded concurrently (unique violation) and still records the rest', async () => {
+    const habit = await createHabitWithStreak(ctx, userId, { days: 7, endingOn: '2026-10-15' });
+    await ctx.prisma.milestoneNotification.create({ data: { habitId: habit.id, milestone: 3 } });
+    // Reads as if the concurrent insert had not landed yet, so the insert itself hits the unique index.
+    const stale = {
+      user: ctx.prisma.user,
+      milestoneNotification: ctx.prisma.milestoneNotification,
+      habit: {
+        findMany: async (args: object) =>
+          (await ctx.prisma.habit.findMany(args as never)).map((h) => ({ ...h, notifications: [] })),
+      },
+    } as unknown as PrismaClient;
+
+    const messages = await createMilestoneService(stale, ctx.clock).collectNew(userId);
+    expect(messages.map((m) => m.milestone)).toEqual([7]);
+    expect(await ctx.prisma.milestoneNotification.count()).toBe(2);
   });
 });
