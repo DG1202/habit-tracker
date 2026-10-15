@@ -192,6 +192,7 @@ Milestone rules:
 
 - OAuth authorization-code flow with `state` and PKCE; provider tokens are not stored.
 - Session token stored only as a SHA-256 hash; cookie is `HttpOnly`, `SameSite=Lax`, `Secure` in production.
+- A successful sign-in revokes the browser's previous session (and closes its sockets), whichever user it belonged to.
 - Mutating requests and WS upgrades require `Origin == APP_ORIGIN` (CSRF / cross-site WebSocket protection).
 - Every habit/check-in query is scoped to the session user.
 - zod validation on all inputs, 16 KB body limit, `helmet` headers, rate limiting on SSO and logout routes.

@@ -45,6 +45,10 @@ export async function authRoutes(app: FastifyInstance, { config, prisma, session
     try {
       const profile = await providers[provider].completeLogin(request, reply);
       const user = await upsertUser(prisma, provider, profile);
+      if (request.session) {
+        await sessions.destroy(readSessionToken(request));
+        hub.closeSession(request.session.id);
+      }
       reply.setCookie(SESSION_COOKIE, await sessions.create(user.id), sessionCookieOptions(config));
       return reply.redirect(`${config.APP_ORIGIN}/`);
     } catch (err) {

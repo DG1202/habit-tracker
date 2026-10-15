@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createTestContext, ORIGIN, request, signIn, type TestContext } from './helpers.ts';
+import { createTestContext, openSocket, ORIGIN, request, signIn, waitFor, type TestContext } from './helpers.ts';
 
 describe('SSO authentication', () => {
   let ctx: TestContext;
@@ -69,6 +69,35 @@ describe('SSO authentication', () => {
     await signIn(ctx, 'github');
     const user = await ctx.prisma.user.findFirstOrThrow({ where: { provider: 'github' } });
     expect(user.email).toBeNull();
+  });
+
+  it("revokes the browser's prior session, for any user, when a new sign-in succeeds", async () => {
+    const prior = await signIn(ctx, 'google');
+    const socket = await openSocket(ctx, prior);
+
+    const res = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/auth/github/callback?code=valid-code&state=stub-state',
+      headers: { cookie: prior },
+    });
+    const sid = res.cookies.find((cookie) => cookie.name === 'sid');
+    expect(sid).toBeDefined();
+    expect(`sid=${sid!.value}`).not.toBe(prior);
+
+    expect((await request(ctx, prior, { method: 'GET', url: '/api/auth/me' })).statusCode).toBe(401);
+    const me = await request(ctx, `sid=${sid!.value}`, { method: 'GET', url: '/api/auth/me' });
+    expect(me.json().provider).toBe('github');
+    expect(await ctx.prisma.session.count()).toBe(1);
+    await waitFor(() => socket.closeCode !== null);
+    expect(socket.closeCode).toBe(4401);
+    socket.ws.terminate();
+  });
+
+  it('keeps the prior session when the new sign-in fails', async () => {
+    const prior = await signIn(ctx, 'google');
+    await ctx.app.inject({ method: 'GET', url: '/api/auth/github/callback?code=bad&state=stub-state', headers: { cookie: prior } });
+    await ctx.app.inject({ method: 'GET', url: '/api/auth/github/callback?error=access_denied', headers: { cookie: prior } });
+    expect((await request(ctx, prior, { method: 'GET', url: '/api/auth/me' })).statusCode).toBe(200);
   });
 
   it('redirects to /login when the provider exchange fails', async () => {
