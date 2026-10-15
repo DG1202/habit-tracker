@@ -1,0 +1,47 @@
+<dialog #dialog class="dialog" aria-labelledby="habit-form-title" (cancel)="onCancel($event)">
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <header class="dialog-header">
+      <h2 id="habit-form-title">{{ isEdit() ? 'Edit habit' : 'New habit' }}</h2>
+      <button type="button" class="icon-btn" aria-label="Close" (click)="close()">×</button>
+    </header>
+
+    @if (serverError(); as message) {
+      <p class="alert" role="alert">{{ message }}</p>
+    }
+
+    <label class="field">
+      Name
+      <input class="input" formControlName="name" autocomplete="off" placeholder="e.g. Read 20 pages"
+             [attr.aria-invalid]="!!errorFor('name')" aria-describedby="name-error" />
+      @if (errorFor('name'); as message) {
+        <span class="field-error" id="name-error">{{ message }}</span>
+      }
+    </label>
+
+    <label class="field">
+      Description
+      <textarea class="input" formControlName="description" rows="3" placeholder="Why does this habit matter?"
+                [attr.aria-invalid]="!!errorFor('description')" aria-describedby="description-error"></textarea>
+      <span class="field-hint">{{ form.controls.description.value.length }}/500</span>
+      @if (errorFor('description'); as message) {
+        <span class="field-error" id="description-error">{{ message }}</span>
+      }
+    </label>
+
+    <label class="field">
+      Start date
+      <input class="input" type="date" formControlName="startDate"
+             [attr.aria-invalid]="!!errorFor('startDate')" aria-describedby="start-date-error" />
+      @if (errorFor('startDate'); as message) {
+        <span class="field-error" id="start-date-error">{{ message }}</span>
+      }
+    </label>
+
+    <footer class="dialog-footer">
+      <button type="button" class="btn btn-ghost" (click)="close()">Cancel</button>
+      <button type="submit" class="btn btn-primary" [disabled]="saving()">
+        {{ saving() ? 'Saving…' : isEdit() ? 'Save changes' : 'Create habit' }}
+      </button>
+    </footer>
+  </form>
+</dialog>

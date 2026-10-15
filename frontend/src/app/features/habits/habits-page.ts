@@ -1,15 +1,16 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import type { Habit } from '../../core/models';
 import { ConfirmDialog } from '../../shared/confirm-dialog';
 import { EmptyState } from '../../shared/empty-state';
 import { ErrorBanner } from '../../shared/error-banner';
 import { HabitFilters } from './habit-filters';
+import { HabitFormDialog } from './habit-form-dialog';
 import { HabitRow } from './habit-row';
 import { HabitsStore } from './habits-store';
 
 @Component({
   selector: 'ht-habits-page',
-  imports: [HabitFilters, HabitRow, EmptyState, ErrorBanner, ConfirmDialog],
+  imports: [HabitFilters, HabitRow, EmptyState, ErrorBanner, ConfirmDialog, HabitFormDialog],
   providers: [HabitsStore],
   templateUrl: './habits-page.html',
   styles: `
@@ -25,6 +26,16 @@ export class HabitsPage {
   protected readonly editing = signal<Habit | 'new' | null>(null);
   protected readonly deleting = signal<Habit | null>(null);
   protected readonly skeletons = [1, 2, 3];
+
+  protected readonly editHabit = computed(() => {
+    const editing = this.editing();
+    return editing === 'new' ? null : editing;
+  });
+
+  protected onSaved(): void {
+    this.editing.set(null);
+    this.store.reload();
+  }
 
   protected confirmDelete(): void {
     const habit = this.deleting();

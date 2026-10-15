@@ -54,3 +54,7 @@
     (cancelled)="deleting.set(null)"
   />
 }
+
+@if (editing()) {
+  <ht-habit-form-dialog [habit]="editHabit()" (saved)="onSaved()" (closed)="editing.set(null)" />
+}
