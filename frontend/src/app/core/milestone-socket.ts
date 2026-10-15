@@ -64,7 +64,7 @@ export class MilestoneSocket {
     this.stopAckTimer();
     this.attempts = 0;
     this.pendingAcks = [];
-    this.toasts.clearMilestones();
+    this.toasts.clear();
     const socket = this.socket;
     this.socket = null;
     socket?.close();

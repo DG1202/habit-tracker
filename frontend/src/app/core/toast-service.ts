@@ -46,8 +46,10 @@ export class ToastService {
     toast?.onDismiss?.();
   }
 
-  clearMilestones(): void {
-    this.items.update((list) => list.filter((item) => item.kind !== 'milestone'));
+  clear(): void {
+    this.timers.forEach((timer) => clearTimeout(timer));
+    this.timers.clear();
+    this.items.set([]);
   }
 
   private remove(id: number): void {

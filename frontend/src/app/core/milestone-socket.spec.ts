@@ -211,11 +211,21 @@ describe('MilestoneSocket', () => {
     expect(first.sent).not.toContainEqual({ type: 'ack', id: 'n1' });
   });
 
-  it('keeps non-milestone toasts when clearing milestones', () => {
-    toasts.error('boom');
+  it('clears every toast, not only milestones, when the user signs out', () => {
     socket.connect('u1');
+    latest().open();
+    latest().receive(milestoneFrame);
+    toasts.success('"Synthetic habit" was deleted');
+    toasts.error('boom');
     socket.disconnect();
-    expect(toasts.toasts()).toHaveLength(1);
+    expect(toasts.toasts()).toEqual([]);
+  });
+
+  it('clears every toast when a different user connects', () => {
+    socket.connect('u1');
+    toasts.success('"Synthetic habit" was deleted');
+    socket.connect('u2');
+    expect(toasts.toasts()).toEqual([]);
   });
 
   it('queues an ack dismissed while offline and flushes it after subscribed', () => {

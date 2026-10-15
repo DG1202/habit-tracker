@@ -25,6 +25,15 @@ describe('ToastService', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('clears every toast and its timer', () => {
+    toasts.success('Saved');
+    toasts.error('Boom');
+    toasts.show({ kind: 'milestone', title: '3-day streak!', message: 'Keep going' });
+    toasts.clear();
+    expect(toasts.toasts()).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('clears pending timers when the service is destroyed', () => {
     toasts.success('One');
     toasts.success('Two');
