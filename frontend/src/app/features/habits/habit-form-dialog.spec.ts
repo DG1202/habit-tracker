@@ -66,6 +66,18 @@ describe('HabitFormDialog', () => {
     expect(api.create).not.toHaveBeenCalled();
   });
 
+  it('rejects an impossible start date through the control validator', async () => {
+    await render();
+    // jsdom's input[type=date] sanitizes impossible dates to '', so set the control directly.
+    fixture.componentInstance['form'].controls.startDate.setValue('2026-02-31');
+    type('input[formcontrolname="name"]', 'Read');
+    await submit();
+    expect(fixture.componentInstance['form'].controls.startDate.errors).toEqual({ date: true });
+    expect(el().textContent).toContain('Enter a valid date');
+    expect(el().textContent).not.toContain('Start date is required');
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
   it('creates a habit with trimmed values and emits saved', async () => {
     await render();
     api.create.mockReturnValue(of(HABIT));
