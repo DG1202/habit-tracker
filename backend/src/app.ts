@@ -11,6 +11,8 @@ import { authRoutes } from './auth/routes.ts';
 import { createSessionService, readSessionToken } from './auth/sessions.ts';
 import { createHabitService } from './habits/service.ts';
 import { habitRoutes } from './habits/routes.ts';
+import { createCheckInService } from './checkins/service.ts';
+import { checkInRoutes } from './checkins/routes.ts';
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -55,12 +57,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(authRoutes, { prefix: '/api', config, prisma: deps.prisma, sessions, providers });
 
   const habits = createHabitService(deps.prisma, clock);
+  const checkIns = createCheckInService(deps.prisma, clock, habits, async () => {});
   await app.register(
     async (scope) => {
       scope.addHook('preHandler', async (request) => {
         currentUser(request);
       });
       await scope.register(habitRoutes, { habits });
+      await scope.register(checkInRoutes, { checkIns });
     },
     { prefix: '/api' },
   );
