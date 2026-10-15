@@ -38,7 +38,7 @@ import { buildMonthGrid } from './month-grid';
     .grid th { font-size: var(--text-xs); color: var(--color-muted); font-weight: 600; }
     .grid td { padding: 0; }
     .day { aspect-ratio: 1; display: grid; place-items: center; border-radius: var(--radius-sm); font-size: var(--text-sm); background: var(--color-bg); }
-    .day.checked { background: var(--color-success); color: #fff; font-weight: 700; }
+    .day.checked { background: var(--color-success); color: var(--color-on-accent); font-weight: 700; }
     .day.today { box-shadow: inset 0 0 0 2px var(--color-primary); }
     .day.future { color: var(--color-muted); background: transparent; }
     @media (max-width: 600px) { .stat dd { font-size: 1.5rem; } .header, .calendar { padding: var(--space-4); } }

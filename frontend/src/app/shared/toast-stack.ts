@@ -23,7 +23,7 @@ import { ToastService } from '../core/toast-service';
     .toast { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); box-shadow: var(--shadow); animation: slide-in 180ms ease-out; border-left: 4px solid var(--color-primary); }
     .toast[data-kind='error'] { border-left-color: var(--color-danger); }
     .toast[data-kind='success'] { border-left-color: var(--color-success); }
-    .toast[data-kind='milestone'] { border-left-color: #f59e0b; background: #fffbeb; }
+    .toast[data-kind='milestone'] { border-left-color: var(--color-milestone); background: var(--color-milestone-soft); }
     .toast-icon { font-size: 1.25rem; }
     .toast-text { flex: 1; display: flex; flex-direction: column; font-size: var(--text-sm); }
     @keyframes slide-in { from { opacity: 0; transform: translateY(-8px); } }

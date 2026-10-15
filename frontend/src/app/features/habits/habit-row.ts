@@ -57,10 +57,10 @@ export const STATUS_LABELS: Record<HabitStatus, string> = { ACTIVE: 'Active', PA
   `,
   styles: `
     .habit-row {
-      display: grid; grid-template-columns: minmax(0, 1fr) 220px 150px 200px; align-items: center;
+      display: grid; grid-template-columns: minmax(0, 1fr) 220px 150px auto; align-items: center;
       gap: var(--space-4); padding: var(--space-4); transition: border-color 120ms, box-shadow 120ms;
     }
-    .habit-row:hover { border-color: #cdd3e0; box-shadow: var(--shadow); }
+    .habit-row:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow); }
     .habit-row.is-done { border-left: 4px solid var(--color-success); }
     .habit-title { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
     .habit-name { font-weight: 600; color: var(--color-text); text-decoration: none; }
@@ -69,13 +69,13 @@ export const STATUS_LABELS: Record<HabitStatus, string> = { ACTIVE: 'Active', PA
     .habit-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: 0; text-align: center; }
     .habit-stats dt { font-size: var(--text-xs); color: var(--color-muted); }
     .habit-stats dd { margin: 0; font-weight: 700; font-size: var(--text-lg); }
-    .habit-actions { justify-content: flex-end; }
+    .habit-actions { justify-content: flex-end; flex-wrap: nowrap; }
     .small { font-size: var(--text-sm); }
     @media (max-width: 860px) {
       .habit-row { grid-template-columns: 1fr; gap: var(--space-3); }
       .habit-stats { text-align: left; }
       .habit-today .btn { width: 100%; }
-      .habit-actions { justify-content: flex-start; }
+      .habit-actions { justify-content: flex-start; flex-wrap: wrap; }
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

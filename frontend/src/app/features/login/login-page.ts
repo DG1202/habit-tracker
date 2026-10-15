@@ -15,6 +15,7 @@ const LOGIN_ERRORS: Record<string, string> = {
     .providers { display: flex; flex-direction: column; gap: var(--space-3); }
     .provider { min-height: 48px; font-size: var(--text-md); }
     .provider svg { width: 20px; height: 20px; }
+    .footnote { font-size: var(--text-xs); }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
