@@ -25,7 +25,9 @@ const notBlank = (control: AbstractControl<string>): ValidationErrors | null => 
 const validDate = (control: AbstractControl<string>): ValidationErrors | null => {
   if (!control.value) return null;
   const parsed = new Date(`${control.value}T00:00:00Z`);
-  return /^\d{4}-\d{2}-\d{2}$/.test(control.value) && !Number.isNaN(parsed.getTime()) ? null : { date: true };
+  return /^\d{4}-\d{2}-\d{2}$/.test(control.value) && !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === control.value
+    ? null
+    : { date: true };
 };
 
 const MESSAGES: Record<FieldName, Record<string, string>> = {
@@ -101,6 +103,7 @@ export class HabitFormDialog implements OnInit {
   }
 
   protected close(): void {
+    if (this.saving()) return;
     this.dialog().nativeElement.close?.();
     this.closed.emit();
   }

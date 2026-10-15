@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { HabitsApi } from '../../core/habits-api';
 import type { Habit } from '../../core/models';
@@ -104,5 +104,34 @@ describe('HabitFormDialog', () => {
     await submit();
     expect(el().textContent).toContain('Start date cannot be after the first check-in');
     expect(el().textContent).toContain('Too late');
+  });
+
+  it('rejects impossible dates such as 2026-02-30', async () => {
+    await render();
+    type('input[formcontrolname="name"]', 'Read');
+    (fixture.componentInstance as unknown as { form: { controls: { startDate: { setValue(v: string): void } } } }).form.controls.startDate.setValue('2026-02-30');
+    await submit();
+    expect(el().textContent).toContain('Enter a valid date');
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it('cannot be closed while saving', async () => {
+    await render();
+    const pending = new Subject<Habit>();
+    api.create.mockReturnValue(pending);
+    const saved = vi.fn();
+    const closed = vi.fn();
+    fixture.componentInstance.saved.subscribe(saved);
+    fixture.componentInstance.closed.subscribe(closed);
+    type('input[formcontrolname="name"]', 'Read');
+    await submit();
+
+    el().querySelector<HTMLButtonElement>('.dialog-footer .btn-ghost')!.click();
+    await fixture.whenStable();
+    expect(closed).not.toHaveBeenCalled();
+
+    pending.next(HABIT);
+    pending.complete();
+    expect(saved).toHaveBeenCalledWith(HABIT);
   });
 });
