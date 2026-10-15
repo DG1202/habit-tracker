@@ -4,6 +4,7 @@ import type { PrismaClient } from './db.ts';
 import { systemClock, type Clock } from './lib/clock.ts';
 import { AppError, errorHandler } from './lib/errors.ts';
 import cookie from '@fastify/cookie';
+import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import websocket from '@fastify/websocket';
 import { currentUser } from './auth/current-user.ts';
@@ -28,10 +29,20 @@ export interface AppDeps {
   logger?: FastifyServerOptions['logger'];
 }
 
+function loggerOptions(config: Config): FastifyServerOptions['logger'] {
+  if (config.NODE_ENV === 'test') return false;
+  return {
+    level: 'info',
+    serializers: {
+      req: (request: { method: string; url: string }) => ({ method: request.method, url: request.url.split('?')[0] }),
+    },
+  };
+}
+
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const { config } = deps;
   const app = Fastify({
-    logger: deps.logger ?? (config.NODE_ENV === 'test' ? false : { level: 'info' }),
+    logger: deps.logger ?? loggerOptions(config),
     bodyLimit: 16 * 1024,
   });
   app.removeContentTypeParser('text/plain');
@@ -41,6 +52,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   const clock = deps.clock ?? systemClock;
+  await app.register(helmet, {
+    contentSecurityPolicy: { directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] } },
+  });
   await app.register(cookie, { secret: config.SESSION_SECRET });
   await app.register(rateLimit, {
     max: 300,
