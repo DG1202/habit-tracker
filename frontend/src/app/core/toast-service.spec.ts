@@ -12,21 +12,24 @@ describe('ToastService', () => {
 
   afterEach(() => vi.useRealTimers());
 
-  it('auto-hides success and error toasts after 5 s but keeps milestones', () => {
+  it('auto-hides success toasts after 5 s but keeps errors and milestones until dismissed', () => {
     toasts.success('Saved');
+    toasts.error('Boom');
     toasts.show({ kind: 'milestone', title: '3-day streak!', message: 'Keep going' });
     vi.advanceTimersByTime(5000);
-    expect(toasts.toasts().map((t) => t.kind)).toEqual(['milestone']);
+    expect(toasts.toasts().map((t) => t.kind)).toEqual(['error', 'milestone']);
+    vi.advanceTimersByTime(60_000);
+    expect(toasts.toasts().map((t) => t.kind)).toEqual(['error', 'milestone']);
   });
 
   it('clears the auto-hide timer when a toast is dismissed', () => {
-    toasts.error('Boom');
+    toasts.success('Saved');
     toasts.dismiss(toasts.toasts()[0]!.id);
     expect(vi.getTimerCount()).toBe(0);
   });
 
   it('pauses auto-hide and restarts the full delay on resume', () => {
-    toasts.error('Boom');
+    toasts.success('Saved');
     const id = toasts.toasts()[0]!.id;
     vi.advanceTimersByTime(4000);
     toasts.pause(id);
@@ -40,7 +43,11 @@ describe('ToastService', () => {
     expect(toasts.toasts()).toEqual([]);
   });
 
-  it('never schedules auto-hide for a resumed milestone or a removed toast', () => {
+  it('never schedules auto-hide for a resumed error, a resumed milestone or a removed toast', () => {
+    toasts.error('Boom');
+    const errorId = toasts.toasts()[0]!.id;
+    toasts.pause(errorId);
+    toasts.resume(errorId);
     const id = toasts.show({ kind: 'milestone', title: '3-day streak!', message: 'Keep going' });
     toasts.pause(id);
     toasts.resume(id);

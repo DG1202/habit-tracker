@@ -81,7 +81,7 @@ describe('ToastStack', () => {
   });
 
   it('pauses auto-hide while hovered and resumes on leave', () => {
-    toasts.error('Boom');
+    toasts.success('Saved');
     render();
 
     toastEls()[0]!.dispatchEvent(new MouseEvent('mouseenter'));
@@ -94,7 +94,7 @@ describe('ToastStack', () => {
   });
 
   it('pauses auto-hide while focus is inside a toast, even after the pointer leaves', () => {
-    toasts.error('Boom');
+    toasts.success('Saved');
     render();
 
     dismissButton(0).focus();
@@ -112,7 +112,7 @@ describe('ToastStack', () => {
   });
 
   it('keeps a toast paused while hovered after focus leaves it', () => {
-    toasts.error('Boom');
+    toasts.success('Saved');
     render();
 
     toastEls()[0]!.dispatchEvent(new MouseEvent('mouseenter'));
@@ -120,6 +120,23 @@ describe('ToastStack', () => {
     el().querySelector<HTMLButtonElement>('#outside')!.focus();
     vi.advanceTimersByTime(10_000);
     expect(toasts.toasts()).toHaveLength(1);
+  });
+
+  it('keeps an error toast until it is dismissed, after hover and focus come and go', () => {
+    toasts.error('Boom');
+    render();
+
+    toastEls()[0]!.dispatchEvent(new MouseEvent('mouseenter'));
+    toastEls()[0]!.dispatchEvent(new MouseEvent('mouseleave'));
+    dismissButton(0).focus();
+    el().querySelector<HTMLButtonElement>('#outside')!.focus();
+    vi.advanceTimersByTime(60_000);
+    render();
+    expect(toastEls()).toHaveLength(1);
+
+    dismissButton(0).click();
+    render();
+    expect(toastEls()).toHaveLength(0);
   });
 
   it('moves focus to the next toast when the focused toast is dismissed, then to <main>', () => {

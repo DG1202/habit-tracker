@@ -10,6 +10,9 @@ export interface Toast {
 
 const AUTO_HIDE_MS = 5000;
 
+// Errors stay so they can be read (WCAG 2.2.1); milestones stay so their dismissal is acknowledged.
+const autoHides = (toast: Pick<Toast, 'kind'>) => toast.kind === 'success';
+
 @Injectable({ providedIn: 'root' })
 export class ToastService {
   private nextId = 1;
@@ -27,8 +30,7 @@ export class ToastService {
   show(toast: Omit<Toast, 'id'>): number {
     const id = this.nextId++;
     this.items.update((list) => [...list, { ...toast, id }]);
-    // Milestone toasts stay until dismissed so the dismissal can be acknowledged to the server.
-    if (toast.kind !== 'milestone') this.scheduleHide(id);
+    if (autoHides(toast)) this.scheduleHide(id);
     return id;
   }
 
@@ -39,7 +41,7 @@ export class ToastService {
 
   resume(id: number): void {
     const toast = this.items().find((item) => item.id === id);
-    if (toast && toast.kind !== 'milestone' && !this.timers.has(id)) this.scheduleHide(id);
+    if (toast && autoHides(toast) && !this.timers.has(id)) this.scheduleHide(id);
   }
 
   success(message: string): void {
