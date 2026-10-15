@@ -72,7 +72,10 @@ export class HabitDetailsPage implements OnInit {
     this.error.set(null);
     forkJoin({ habit: this.api.get(this.id()), month: this.api.month(this.id()) })
       .pipe(
-        finalize(() => this.loading.set(false)),
+        finalize(() => {
+          this.loading.set(false);
+          this.busy.set(false);
+        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
@@ -82,7 +85,10 @@ export class HabitDetailsPage implements OnInit {
         },
         error: (err: unknown) => {
           const error = toApiError(err);
-          this.error.set(error.status === 404 ? 'This habit does not exist or is not yours.' : error.message);
+          const message = error.status === 404 ? 'This habit does not exist or is not yours.' : error.message;
+          // A reload after a mutation keeps the loaded page; only the first load shows the banner.
+          if (this.habit()) this.toasts.error(message);
+          else this.error.set(message);
         },
       });
   }
@@ -96,10 +102,14 @@ export class HabitDetailsPage implements OnInit {
   }
 
   private mutate(request: Observable<unknown>): void {
+    // load() clears busy when the reload settles, so a second click cannot race it.
     this.busy.set(true);
-    request.pipe(finalize(() => this.busy.set(false))).subscribe({
+    request.subscribe({
       complete: () => this.load(),
-      error: (err: unknown) => this.toasts.error(toApiError(err).message),
+      error: (err: unknown) => {
+        this.busy.set(false);
+        this.toasts.error(toApiError(err).message);
+      },
     });
   }
 }

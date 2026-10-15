@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { merge, of, Subject, type Observable } from 'rxjs';
-import { catchError, debounceTime, finalize, map, switchMap } from 'rxjs/operators';
+import { catchError, debounceTime, map, switchMap } from 'rxjs/operators';
 import { toApiError } from '../../core/api-error';
 import { HabitsApi } from '../../core/habits-api';
 import type { Habit, HabitQuery, HabitStatus } from '../../core/models';
@@ -14,6 +14,7 @@ export class HabitsStore {
   private readonly api = inject(HabitsApi);
   private readonly toasts = inject(ToastService);
   private readonly reload$ = new Subject<void>();
+  private readonly awaitingReload = new Set<string>();
 
   readonly query = signal<HabitQuery>(EMPTY_QUERY);
   readonly habits = signal<Habit[]>([]);
@@ -43,6 +44,8 @@ export class HabitsStore {
       .subscribe((habits) => {
         if (habits) this.habits.set(habits);
         this.loading.set(false);
+        this.awaitingReload.forEach((id) => this.setBusy(id, false));
+        this.awaitingReload.clear();
       });
   }
 
@@ -76,12 +79,17 @@ export class HabitsStore {
 
   private run(id: string, request: Observable<unknown>, successMessage?: string): void {
     this.setBusy(id, true);
-    request.pipe(finalize(() => this.setBusy(id, false))).subscribe({
+    request.subscribe({
       complete: () => {
         if (successMessage) this.toasts.success(successMessage);
+        // Stay busy until the list reflects the change, or a second click would hit a 409/404.
+        this.awaitingReload.add(id);
         this.reload();
       },
-      error: (err: unknown) => this.toasts.error(toApiError(err).message),
+      error: (err: unknown) => {
+        this.setBusy(id, false);
+        this.toasts.error(toApiError(err).message);
+      },
     });
   }
 

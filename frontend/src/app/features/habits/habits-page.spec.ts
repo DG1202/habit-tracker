@@ -128,6 +128,25 @@ describe('HabitsPage', () => {
       expect(text()).toContain('Undo');
     });
 
+    it('keeps the button busy until the reload completes, so a second click sends no request', async () => {
+      const done = { ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } };
+      await load(HABIT);
+      button('Check in').click();
+      await fixture.whenStable();
+      http.expectOne('/api/habits/h1/check-ins').flush(done);
+      await fixture.whenStable();
+
+      const reload = list();
+      expect(button('Check in').disabled).toBe(true);
+      button('Check in').click();
+      await fixture.whenStable();
+      http.expectNone('/api/habits/h1/check-ins');
+
+      reload.flush([done]);
+      await fixture.whenStable();
+      expect(button('✓ Done · Undo').disabled).toBe(false);
+    });
+
     it('undoes today\'s check-in', async () => {
       await load({ ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } });
       button('✓ Done · Undo').click();

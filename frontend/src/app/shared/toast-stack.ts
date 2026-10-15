@@ -18,7 +18,8 @@ import { ToastService } from '../core/toast-service';
     </div>
   `,
   styles: `
-    .toasts { position: fixed; top: var(--space-4); right: var(--space-4); z-index: 1000; display: flex; flex-direction: column; gap: var(--space-2); width: min(380px, calc(100vw - 2 * var(--space-4))); }
+    /* 57px is the sticky top bar's height; the stack must never cover Log out. */
+    .toasts { position: fixed; top: calc(57px + var(--space-4)); right: var(--space-4); z-index: 1000; display: flex; flex-direction: column; gap: var(--space-2); width: min(380px, calc(100vw - 2 * var(--space-4))); }
     .toast { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); box-shadow: var(--shadow); animation: slide-in 180ms ease-out; border-left: 4px solid var(--color-primary); }
     .toast[data-kind='error'] { border-left-color: var(--color-danger); }
     .toast[data-kind='success'] { border-left-color: var(--color-success); }

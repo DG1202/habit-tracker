@@ -7,7 +7,7 @@ import type { HabitQuery } from '../../core/models';
     <div class="filters card">
       <label class="search">
         <span class="visually-hidden">Search habits</span>
-        <input class="input" type="search" placeholder="Search by name or description…" [value]="query().q" (input)="onSearch($event)" />
+        <input class="input" type="search" placeholder="Search by name or description…" maxlength="100" [value]="query().q" (input)="onSearch($event)" />
       </label>
       <div class="chips" role="group" aria-label="Filter by status">
         @for (option of statusOptions; track option.value) {
