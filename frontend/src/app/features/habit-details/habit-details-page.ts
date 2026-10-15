@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Title } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
 import { forkJoin, type Observable, type Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
@@ -51,6 +52,7 @@ export class HabitDetailsPage {
   private readonly api = inject(HabitsApi);
   private readonly toasts = inject(ToastService);
   private readonly router = inject(Router);
+  private readonly title = inject(Title);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly habit = signal<Habit | null>(null);
@@ -90,6 +92,10 @@ export class HabitDetailsPage {
   });
 
   constructor() {
+    effect(() => {
+      const habit = this.habit();
+      if (habit) this.title.setTitle(`${habit.name} · Habit Tracker`);
+    });
     effect(() => {
       this.id();
       untracked(() => {

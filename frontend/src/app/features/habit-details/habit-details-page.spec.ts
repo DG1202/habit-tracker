@@ -1,5 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Title } from '@angular/platform-browser';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { vi } from 'vitest';
@@ -63,6 +64,14 @@ describe('HabitDetailsPage', () => {
     expect(root().querySelector('[aria-label]:not([role]):not(button):not(a)')).toBeNull();
     await flushLoad(HABIT);
     expect(root().querySelector('.loading')).toBeNull();
+  });
+
+  it('puts the habit name in the document title once loaded', async () => {
+    const title = TestBed.inject(Title);
+    title.setTitle('Habit details · Habit Tracker');
+    expect(title.getTitle()).toBe('Habit details · Habit Tracker');
+    await flushLoad(HABIT);
+    expect(title.getTitle()).toBe('Stretch for 10 minutes · Habit Tracker');
   });
 
   it('keeps the button busy until the reload completes, so a second click sends no request', async () => {
