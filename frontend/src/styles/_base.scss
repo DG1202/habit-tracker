@@ -1,5 +1,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; }
+// ToastStack publishes --toast-stack-h; keep focused controls and the last rows clear of it.
+html { scroll-padding-bottom: calc(var(--toast-stack-h, 0px) + var(--space-4)); }
 body {
   font-family: var(--font);
   font-size: var(--text-md);
@@ -17,4 +19,4 @@ a { color: var(--color-primary); }
 .muted { color: var(--color-muted); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .page:focus-visible { box-shadow: none; }
-.page { max-width: 1040px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-7); }
+.page { max-width: 1040px; margin: 0 auto; padding: var(--space-5) var(--space-4) calc(var(--space-7) + var(--toast-stack-h, 0px)); }

@@ -22,6 +22,8 @@ describe('App', () => {
     unreachable.set(false);
     retry.mockClear();
     socket = { connect: vi.fn(), disconnect: vi.fn(), status: () => 'disconnected' };
+    // jsdom has no ResizeObserver; ToastStack needs one.
+    vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
     TestBed.configureTestingModule({
       imports: [App],
       providers: [
@@ -33,6 +35,8 @@ describe('App', () => {
     fixture = TestBed.createComponent(App);
     await fixture.whenStable();
   });
+
+  afterEach(() => vi.unstubAllGlobals());
 
   it('connects the socket for the signed-in user and disconnects when the user becomes null', async () => {
     expect(socket.connect).not.toHaveBeenCalled();

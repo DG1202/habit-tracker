@@ -28,8 +28,18 @@ export class ToastService {
     const id = this.nextId++;
     this.items.update((list) => [...list, { ...toast, id }]);
     // Milestone toasts stay until dismissed so the dismissal can be acknowledged to the server.
-    if (toast.kind !== 'milestone') this.timers.set(id, setTimeout(() => this.remove(id), AUTO_HIDE_MS));
+    if (toast.kind !== 'milestone') this.scheduleHide(id);
     return id;
+  }
+
+  pause(id: number): void {
+    clearTimeout(this.timers.get(id));
+    this.timers.delete(id);
+  }
+
+  resume(id: number): void {
+    const toast = this.items().find((item) => item.id === id);
+    if (toast && toast.kind !== 'milestone' && !this.timers.has(id)) this.scheduleHide(id);
   }
 
   success(message: string): void {
@@ -50,6 +60,10 @@ export class ToastService {
     this.timers.forEach((timer) => clearTimeout(timer));
     this.timers.clear();
     this.items.set([]);
+  }
+
+  private scheduleHide(id: number): void {
+    this.timers.set(id, setTimeout(() => this.remove(id), AUTO_HIDE_MS));
   }
 
   private remove(id: number): void {

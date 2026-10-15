@@ -25,6 +25,38 @@ describe('ToastService', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('pauses auto-hide and restarts the full delay on resume', () => {
+    toasts.error('Boom');
+    const id = toasts.toasts()[0]!.id;
+    vi.advanceTimersByTime(4000);
+    toasts.pause(id);
+    vi.advanceTimersByTime(10_000);
+    expect(toasts.toasts()).toHaveLength(1);
+
+    toasts.resume(id);
+    vi.advanceTimersByTime(4999);
+    expect(toasts.toasts()).toHaveLength(1);
+    vi.advanceTimersByTime(1);
+    expect(toasts.toasts()).toEqual([]);
+  });
+
+  it('never schedules auto-hide for a resumed milestone or a removed toast', () => {
+    const id = toasts.show({ kind: 'milestone', title: '3-day streak!', message: 'Keep going' });
+    toasts.pause(id);
+    toasts.resume(id);
+    toasts.resume(999);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('does not stack a second timer when resumed twice', () => {
+    toasts.success('Saved');
+    const id = toasts.toasts()[0]!.id;
+    toasts.pause(id);
+    toasts.resume(id);
+    toasts.resume(id);
+    expect(vi.getTimerCount()).toBe(1);
+  });
+
   it('clears every toast and its timer', () => {
     toasts.success('Saved');
     toasts.error('Boom');
