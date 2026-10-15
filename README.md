@@ -29,6 +29,9 @@ yarn install
 yarn start                    # http://localhost:4300 (proxies /api and /ws to :3300)
 ```
 
+If `.env` is incomplete, `yarn dev` prints `Invalid or missing environment variables: …` and keeps watching
+instead of exiting — fix `.env` and it restarts.
+
 Open **http://localhost:4300**. Always use this origin — OAuth redirect URIs and cookie/origin checks are
 bound to it.
 
