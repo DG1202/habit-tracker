@@ -16,6 +16,7 @@ import { restoreFocusOnDestroy } from './restore-focus';
     </dialog>
   `,
   styles: `
+    p { overflow-wrap: anywhere; }
     .danger { background: var(--color-danger); border-color: var(--color-danger); }
     .danger:hover:not(:disabled) { background: var(--color-danger-hover); border-color: var(--color-danger-hover); }
   `,

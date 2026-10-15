@@ -62,7 +62,7 @@ export const STATUS_LABELS: Record<HabitStatus, string> = { ACTIVE: 'Active', PA
     .habit-row:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow); }
     .habit-row.is-done { border-left: 4px solid var(--color-success); }
     .habit-title { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
-    .habit-name { font-weight: 600; color: var(--color-text); text-decoration: none; }
+    .habit-name { font-weight: 600; color: var(--color-text); text-decoration: none; overflow-wrap: anywhere; }
     .habit-name:hover { color: var(--color-primary); text-decoration: underline; }
     .habit-desc { font-size: var(--text-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .habit-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: 0; text-align: center; }

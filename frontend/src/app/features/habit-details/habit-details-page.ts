@@ -26,6 +26,7 @@ import { buildMonthGrid } from './month-grid';
     .header { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
     .title { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
     .actions { margin-left: auto; }
+    .header h1, .header p { overflow-wrap: anywhere; }
     .meta { font-size: var(--text-sm); }
     .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
     .stat { padding: var(--space-4); text-align: center; }
