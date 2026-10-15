@@ -12,17 +12,21 @@ const BOB: User = { ...ALICE, id: 'u2', displayName: 'Bob Test' };
 
 describe('App', () => {
   const user = signal<User | null | undefined>(undefined);
+  const unreachable = signal(false);
+  const retry = vi.fn();
   let fixture: ComponentFixture<App>;
   let socket: { connect: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn>; status: () => string };
 
   beforeEach(async () => {
     user.set(undefined);
+    unreachable.set(false);
+    retry.mockClear();
     socket = { connect: vi.fn(), disconnect: vi.fn(), status: () => 'disconnected' };
     TestBed.configureTestingModule({
       imports: [App],
       providers: [
         provideRouter([]),
-        { provide: AuthStore, useValue: { user, logout: vi.fn() } },
+        { provide: AuthStore, useValue: { user, unreachable, retry, logout: vi.fn() } },
         { provide: MilestoneSocket, useValue: socket },
       ],
     });
@@ -49,5 +53,16 @@ describe('App', () => {
     user.set(BOB);
     await fixture.whenStable();
     expect(socket.connect).toHaveBeenLastCalledWith('u2');
+  });
+
+  it('shows a "Cannot reach the server" banner with Retry when the session check fails', async () => {
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('ht-error-banner')).toBeNull();
+
+    unreachable.set(true);
+    await fixture.whenStable();
+    expect(root.textContent).toContain('Cannot reach the server');
+    root.querySelector<HTMLButtonElement>('ht-error-banner button')!.click();
+    expect(retry).toHaveBeenCalledTimes(1);
   });
 });

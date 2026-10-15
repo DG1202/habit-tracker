@@ -2,17 +2,23 @@ import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/cor
 import { RouterOutlet } from '@angular/router';
 import { AuthStore } from './core/auth-store';
 import { MilestoneSocket } from './core/milestone-socket';
+import { ErrorBanner } from './shared/error-banner';
 import { ToastStack } from './shared/toast-stack';
 import { TopBar } from './shared/top-bar';
 
 @Component({
   selector: 'ht-root',
-  imports: [RouterOutlet, TopBar, ToastStack],
+  imports: [RouterOutlet, TopBar, ToastStack, ErrorBanner],
   template: `
     @if (auth.user()) {
       <ht-top-bar />
     }
-    <main class="page"><router-outlet /></main>
+    <main class="page">
+      @if (auth.unreachable()) {
+        <ht-error-banner message="Cannot reach the server. Check your connection and try again." (retry)="auth.retry()" />
+      }
+      <router-outlet />
+    </main>
     <ht-toast-stack />
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
