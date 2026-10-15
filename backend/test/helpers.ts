@@ -76,14 +76,17 @@ export interface TestContext {
   close(): Promise<void>;
 }
 
-export async function createTestContext(now = '2026-10-15T12:00:00.000Z'): Promise<TestContext> {
+export async function createTestContext(
+  now = '2026-10-15T12:00:00.000Z',
+  options: { realOAuth?: boolean } = {},
+): Promise<TestContext> {
   const dir = mkdtempSync(join(tmpdir(), 'habit-tracker-test-'));
   const file = join(dir, 'test.db');
   applyMigrations(file);
   const prisma = createPrisma(`file:${file}`);
   const clock = new TestClock(new Date(now));
   const providers = new StubProviders();
-  const app = await buildApp({ config: TEST_CONFIG, prisma, clock, providers: providers.clients });
+  const app = await buildApp({ config: TEST_CONFIG, prisma, clock, providers: options.realOAuth ? undefined : providers.clients });
   await app.ready();
   return {
     app,
