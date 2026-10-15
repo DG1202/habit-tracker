@@ -122,4 +122,11 @@ describe('check-ins API', () => {
     expect((await checkIn(bob, habit.id)).statusCode).toBe(404);
     expect(await ctx.prisma.checkIn.count({ where: { habitId: habit.id } })).toBe(0);
   });
+
+  it('stamps createdAt from the injected clock', async () => {
+    const habit = await createHabitWithStreak(ctx, aliceId, { days: 0, endingOn: '2026-10-15' });
+    expect((await checkIn(alice, habit.id)).statusCode).toBe(201);
+    const row = await ctx.prisma.checkIn.findFirstOrThrow({ where: { habitId: habit.id } });
+    expect(row.createdAt.toISOString()).toBe('2026-10-15T12:00:00.000Z');
+  });
 });

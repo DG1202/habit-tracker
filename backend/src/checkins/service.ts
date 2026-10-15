@@ -29,7 +29,7 @@ export function createCheckInService(
       // One statement re-checks ownership, status and start date, so a concurrent edit cannot slip in before the insert.
       const inserted = await prisma.$executeRaw`
         INSERT INTO "CheckIn" ("id", "habitId", "date", "createdAt")
-        SELECT ${randomUUID()}, "id", ${today}, ${new Date()} FROM "Habit"
+        SELECT ${randomUUID()}, "id", ${today}, ${clock.now()} FROM "Habit"
         WHERE "id" = ${habitId} AND "userId" = ${user.id} AND "status" = 'ACTIVE' AND "startDate" <= ${today}
         ON CONFLICT ("habitId", "date") DO NOTHING`;
       if (inserted === 0) {
