@@ -240,6 +240,43 @@ describe('HabitsPage', () => {
       expect(root().querySelector('.badge')!.textContent).toContain('Paused');
     });
 
+    it('shows the banner, not a toast, when a filter change replaces a pending action reload and fails', async () => {
+      await load(HABIT);
+      button('Check in').click();
+      await fixture.whenStable();
+      http.expectOne('/api/habits/h1/check-ins').flush({ ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } });
+      await fixture.whenStable();
+      const reload = list();
+
+      button('Paused').click();
+      await fixture.whenStable();
+      expect(reload.cancelled).toBe(true);
+      list().flush({ error: { code: 'INTERNAL', message: 'Server exploded', details: [] } }, { status: 500, statusText: 'Error' });
+      await fixture.whenStable();
+
+      expect(root().querySelector('ht-error-banner')!.textContent).toContain('Server exploded');
+      expect(root().querySelector('ht-habit-row')).toBeNull();
+      expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'error')).toBe(false);
+    });
+
+    it('shows the banner when an action reload for a newly selected filter fails', async () => {
+      await load(HABIT);
+      button('Check in').click();
+      await fixture.whenStable();
+      const post = http.expectOne('/api/habits/h1/check-ins');
+      button('Paused').click();
+      await fixture.whenStable();
+      const chipLoad = list();
+      post.flush({ ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } });
+      await fixture.whenStable();
+      expect(chipLoad.cancelled).toBe(true);
+      list().flush({ error: { code: 'INTERNAL', message: 'Server exploded', details: [] } }, { status: 500, statusText: 'Error' });
+      await fixture.whenStable();
+
+      expect(root().querySelector('ht-error-banner')!.textContent).toContain('Server exploded');
+      expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'error')).toBe(false);
+    });
+
     it('applies a status chip without waiting for the search debounce', async () => {
       await load(HABIT);
       button('Paused').click();

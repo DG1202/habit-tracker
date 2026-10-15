@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { merge, of, Subject, timer, type Observable } from 'rxjs';
-import { catchError, debounce, map, switchMap } from 'rxjs/operators';
+import { catchError, debounce, map, switchMap, tap } from 'rxjs/operators';
 import { toApiError } from '../../core/api-error';
 import { HabitsApi } from '../../core/habits-api';
 import type { Habit, HabitQuery, HabitStatus } from '../../core/models';
@@ -10,12 +10,15 @@ import { ToastService } from '../../core/toast-service';
 const EMPTY_QUERY: HabitQuery = { q: '', status: '', today: '' };
 const SEARCH_DEBOUNCE_MS = 250;
 
+const sameQuery = (a: HabitQuery, b: HabitQuery) => a.q === b.q && a.status === b.status && a.today === b.today;
+
 @Injectable()
 export class HabitsStore {
   private readonly api = inject(HabitsApi);
   private readonly toasts = inject(ToastService);
   private readonly reload$ = new Subject<void>();
   private readonly awaitingReload = new Set<string>();
+  private shownQuery: HabitQuery | null = null;
 
   readonly query = signal<HabitQuery>(EMPTY_QUERY);
   readonly habits = signal<Habit[]>([]);
@@ -43,10 +46,12 @@ export class HabitsStore {
           this.loading.set(true);
           this.error.set(null);
           return this.api.list(query).pipe(
+            tap(() => (this.shownQuery = query)),
             catchError((err: unknown) => {
               const message = toApiError(err).message;
-              // A failed reload after an action keeps the list, which already shows the action's result.
-              if (this.awaitingReload.size > 0 && this.habits().length > 0) this.toasts.error(message);
+              // Keep the rows only when they match the selected filters and already show the action's result.
+              const rowsMatchQuery = this.shownQuery !== null && sameQuery(this.shownQuery, query);
+              if (this.awaitingReload.size > 0 && this.habits().length > 0 && rowsMatchQuery) this.toasts.error(message);
               else this.error.set(message);
               return of(null);
             }),
