@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 
 export interface Toast {
   id: number;
@@ -14,13 +14,21 @@ const AUTO_HIDE_MS = 5000;
 export class ToastService {
   private nextId = 1;
   private readonly items = signal<Toast[]>([]);
+  private readonly timers = new Map<number, ReturnType<typeof setTimeout>>();
   readonly toasts = this.items.asReadonly();
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => {
+      this.timers.forEach((timer) => clearTimeout(timer));
+      this.timers.clear();
+    });
+  }
 
   show(toast: Omit<Toast, 'id'>): number {
     const id = this.nextId++;
     this.items.update((list) => [...list, { ...toast, id }]);
     // Milestone toasts stay until dismissed so the dismissal can be acknowledged to the server.
-    if (toast.kind !== 'milestone') setTimeout(() => this.remove(id), AUTO_HIDE_MS);
+    if (toast.kind !== 'milestone') this.timers.set(id, setTimeout(() => this.remove(id), AUTO_HIDE_MS));
     return id;
   }
 
@@ -43,6 +51,8 @@ export class ToastService {
   }
 
   private remove(id: number): void {
+    clearTimeout(this.timers.get(id));
+    this.timers.delete(id);
     this.items.update((list) => list.filter((item) => item.id !== id));
   }
 }
