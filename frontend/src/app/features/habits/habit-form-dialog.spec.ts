@@ -1,10 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import { FormControl } from '@angular/forms';
 import { of, Subject, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { HabitsApi } from '../../core/habits-api';
 import type { Habit } from '../../core/models';
-import { HabitFormDialog } from './habit-form-dialog';
+import { HabitFormDialog, validDate } from './habit-form-dialog';
 
 const HABIT: Habit = {
   id: 'h1',
@@ -107,15 +108,6 @@ describe('HabitFormDialog', () => {
     expect(el().textContent).toContain('Too late');
   });
 
-  it('rejects impossible dates such as 2026-02-30', async () => {
-    await render();
-    type('input[formcontrolname="name"]', 'Read');
-    (fixture.componentInstance as unknown as { form: { controls: { startDate: { setValue(v: string): void } } } }).form.controls.startDate.setValue('2026-02-30');
-    await submit();
-    expect(el().textContent).toContain('Enter a valid date');
-    expect(api.create).not.toHaveBeenCalled();
-  });
-
   it('names each field by its label only and links the hint and error through aria-describedby', async () => {
     await render();
     const fields = [
@@ -211,5 +203,15 @@ describe('HabitFormDialog', () => {
     close();
     await fixture.whenStable();
     expect(closed).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('validDate', () => {
+  it.each(['2026-02-30', '2026-13-01', '2026-2-3', '2026-02-28T00:00', 'not a date'])('rejects %s', (value) => {
+    expect(validDate(new FormControl(value, { nonNullable: true }))).toEqual({ date: true });
+  });
+
+  it.each(['', '2026-02-28', '2024-02-29'])('accepts %j', (value) => {
+    expect(validDate(new FormControl(value, { nonNullable: true }))).toBeNull();
   });
 });
