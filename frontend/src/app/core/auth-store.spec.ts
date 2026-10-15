@@ -6,6 +6,7 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { Subject } from 'rxjs';
 import { vi } from 'vitest';
 import { AuthStore } from './auth-store';
 import type { User } from './models';
@@ -132,6 +133,14 @@ describe('AuthStore', () => {
     await Promise.resolve();
     http.expectOne('/api/me/timezone').flush(null, { status: 500, statusText: 'Error' });
     expect(await result).toEqual(USER);
+  });
+
+  it('drops its session-ended subscription when the request completes', () => {
+    const request = new Subject<void>();
+    request.pipe(auth.endWithSession()).subscribe();
+    expect(auth['sessionEnded'].observed).toBe(true);
+    request.complete();
+    expect(auth['sessionEnded'].observed).toBe(false);
   });
 
   async function signIn() {
