@@ -162,8 +162,8 @@ Client → server:
 { "type": "ack", "id": "<notificationId>" }
 ```
 
-- `subscribe` — the server sends nothing until it receives this. It registers the socket for the user and
-  evaluates milestones immediately.
+- `subscribe` — the server sends nothing until it receives this. It registers the socket for the user,
+  evaluates milestones immediately, sends any pending `milestone` frames, then replies `subscribed`.
 - `ack` — marks a notification as read (`ackedAt`); sent when the user dismisses a milestone toast. Milestone
   toasts stay on screen until dismissed.
 
@@ -184,6 +184,9 @@ Milestone rules:
 - Sent **once per habit per milestone, ever** — recorded in `MilestoneNotification` (unique per habit +
   milestone) before sending. Reconnecting never resends; rebuilding a broken streak does not resend.
 - No milestone reached → nothing is sent.
+- Logout closes that session's sockets, and a socket whose session has expired is closed instead of receiving
+  milestones or acks; both use close code `4401`. The client then treats the user as signed out and does not
+  reconnect.
 
 ## Security notes
 
@@ -202,7 +205,12 @@ The API has no backfill. To demo milestones locally:
 cd backend && yarn seed:demo --user-id <your user id>
 ```
 
-Creates habits with 3-, 7- and 30-day histories for that user. Refuses to run with `NODE_ENV=production`.
+Run it without `--user-id` (or with an unknown id) to print the known users and their ids.
+
+Creates four habits for that user: three with 2, 6 and 29 check-ins ending yesterday, so checking in today
+reaches the 3-, 7- and 30-day milestones live; and one with 7 check-ins ending yesterday, already at a 7-day
+streak, so its 3- and 7-day milestones arrive as soon as the app connects. Refuses to run with
+`NODE_ENV=production`.
 
 ## Containerization
 
