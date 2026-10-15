@@ -1,6 +1,6 @@
-import { signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { vi } from 'vitest';
 import { App } from './app';
 import { AuthStore } from './core/auth-store';
@@ -9,6 +9,9 @@ import type { User } from './core/models';
 
 const ALICE: User = { id: 'u1', provider: 'google', email: null, displayName: 'Alice Test', avatarUrl: null, timezone: 'UTC' };
 const BOB: User = { ...ALICE, id: 'u2', displayName: 'Bob Test' };
+
+@Component({ template: '<button type="button">Page action</button>' })
+class Blank {}
 
 describe('App', () => {
   const user = signal<User | null | undefined>(undefined);
@@ -27,7 +30,10 @@ describe('App', () => {
     TestBed.configureTestingModule({
       imports: [App],
       providers: [
-        provideRouter([]),
+        provideRouter([
+          { path: '', component: Blank },
+          { path: 'next', component: Blank },
+        ]),
         { provide: AuthStore, useValue: { user, unreachable, retry, logout: vi.fn() } },
         { provide: MilestoneSocket, useValue: socket },
       ],
@@ -82,5 +88,23 @@ describe('App', () => {
 
     expect(root.querySelector('ht-error-banner')).toBeNull();
     expect(document.activeElement).toBe(root.querySelector('main'));
+  });
+
+  it('moves focus to <main> after a route change, but not on the first navigation', async () => {
+    const root = fixture.nativeElement as HTMLElement;
+    document.body.appendChild(root);
+    const router = TestBed.inject(Router);
+    try {
+      await router.navigateByUrl('/');
+      await fixture.whenStable();
+      expect(document.activeElement).toBe(document.body);
+
+      root.querySelector<HTMLButtonElement>('main button')!.focus();
+      await router.navigateByUrl('/next');
+      await fixture.whenStable();
+      expect(document.activeElement).toBe(root.querySelector('main'));
+    } finally {
+      root.remove();
+    }
   });
 });
