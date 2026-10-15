@@ -141,6 +141,11 @@ All endpoints are under `/api`, JSON, and require a session unless noted.
 | `POST /habits/:id/check-ins` | Check in today; `201` with the habit + stats |
 | `DELETE /habits/:id/check-ins/today` | Undo today's check-in; `200` with the habit + stats |
 
+Every endpoint that returns a habit uses the same shape: `{ id, name, description, startDate, status,
+startsInFuture, stats: { currentStreak, bestStreak, totalCheckIns, checkedInToday }, createdAt, updatedAt }`.
+`startsInFuture` is computed by the server: `true` when the habit is Active and `startDate` is after today in
+the user's time zone. The client uses it instead of its own clock.
+
 Errors: `{ "error": { "code": "CHECKIN_EXISTS", "message": "…", "details": [] } }`. Another user's habit
 returns `404` (existence is not revealed).
 

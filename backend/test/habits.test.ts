@@ -151,6 +151,34 @@ describe('habits API', () => {
     expect(done.json().map((h: { name: string }) => h.name)).toEqual(['Kyiv today']);
   });
 
+  it("reports startsInFuture against the user's today, for active habits only", async () => {
+    ctx.clock.set('2026-10-15T22:30:00.000Z');
+    await request(ctx, alice, { method: 'PUT', url: '/api/me/timezone', payload: { timezone: 'Europe/Kyiv' } });
+    const startsToday = (await create(alice, { name: 'Kyiv today', startDate: '2026-10-16' })).json();
+    const tomorrow = (await create(alice, { name: 'Tomorrow', startDate: '2026-10-17' })).json();
+    expect(startsToday.startsInFuture).toBe(false);
+    expect(tomorrow.startsInFuture).toBe(true);
+
+    const list = (await request(ctx, alice, { method: 'GET', url: '/api/habits' })).json();
+    expect(Object.fromEntries(list.map((h: { name: string; startsInFuture: boolean }) => [h.name, h.startsInFuture]))).toEqual({
+      'Kyiv today': false,
+      Tomorrow: true,
+    });
+    expect((await request(ctx, alice, { method: 'GET', url: `/api/habits/${tomorrow.id}` })).json().startsInFuture).toBe(true);
+
+    const paused = await request(ctx, alice, { method: 'PATCH', url: `/api/habits/${tomorrow.id}`, payload: { status: 'PAUSED' } });
+    expect(paused.json().startsInFuture).toBe(false);
+
+    const checked = await request(ctx, alice, { method: 'POST', url: `/api/habits/${startsToday.id}/check-ins`, payload: {} });
+    expect(checked.json().startsInFuture).toBe(false);
+    const undone = await request(ctx, alice, { method: 'DELETE', url: `/api/habits/${startsToday.id}/check-ins/today` });
+    expect(undone.json().startsInFuture).toBe(false);
+
+    ctx.clock.set('2026-10-16T22:30:00.000Z');
+    const resumed = await request(ctx, alice, { method: 'PATCH', url: `/api/habits/${tomorrow.id}`, payload: { status: 'ACTIVE' } });
+    expect(resumed.json().startsInFuture).toBe(false);
+  });
+
   it('refuses to move the start date after the first check-in', async () => {
     const userId = await userIdOf(ctx, alice);
     const habit = await createHabitWithStreak(ctx, userId, { days: 3, endingOn: '2026-10-15' });

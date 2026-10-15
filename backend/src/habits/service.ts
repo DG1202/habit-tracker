@@ -12,6 +12,7 @@ export interface HabitDto {
   description: string;
   startDate: string;
   status: Habit['status'];
+  startsInFuture: boolean;
   stats: HabitStats;
   createdAt: string;
   updatedAt: string;
@@ -28,6 +29,7 @@ function toDto(habit: HabitWithDates, today: string): HabitDto {
     description: habit.description,
     startDate: habit.startDate,
     status: habit.status,
+    startsInFuture: habit.status === 'ACTIVE' && habit.startDate > today,
     stats: computeStats(habit.checkIns.map((c) => c.date), today),
     createdAt: habit.createdAt.toISOString(),
     updatedAt: habit.updatedAt.toISOString(),
