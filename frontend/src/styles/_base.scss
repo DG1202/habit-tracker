@@ -1,7 +1,17 @@
-*, *::before, *::after { box-sizing: border-box; }
-html, body { margin: 0; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+}
 // Keep focused controls clear of the sticky top bar; ToastStack publishes --toast-stack-h for the bottom.
-html { scroll-padding-top: var(--top-bar-h); scroll-padding-bottom: calc(var(--toast-stack-h, 0px) + var(--space-4)); }
+html {
+  scroll-padding-top: var(--top-bar-h);
+  scroll-padding-bottom: calc(var(--toast-stack-h, 0px) + var(--space-4));
+}
 body {
   font-family: var(--font);
   font-size: var(--text-md);
@@ -10,16 +20,54 @@ body {
   background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
 }
-h1, h2, h3 { margin: 0; line-height: 1.25; }
-h1 { font-size: var(--text-xl); }
-h2 { font-size: var(--text-lg); }
-p { margin: 0; }
-a { color: var(--color-primary); }
-:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: var(--radius-sm); }
-.muted { color: var(--color-muted); }
-.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.page:focus-visible { outline: none; }
-.page { max-width: 1040px; margin: 0 auto; padding: var(--space-5) var(--space-4) calc(var(--space-7) + var(--toast-stack-h, 0px)); }
+h1,
+h2,
+h3 {
+  margin: 0;
+  line-height: 1.25;
+}
+h1 {
+  font-size: var(--text-xl);
+}
+h2 {
+  font-size: var(--text-lg);
+}
+p {
+  margin: 0;
+}
+a {
+  color: var(--color-primary);
+}
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+.muted {
+  color: var(--color-muted);
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.page:focus-visible {
+  outline: none;
+}
+.page {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4) calc(var(--space-7) + var(--toast-stack-h, 0px));
+}
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

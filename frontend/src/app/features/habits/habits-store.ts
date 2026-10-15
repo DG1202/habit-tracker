@@ -11,7 +11,8 @@ import { ToastService } from '../../core/toast-service';
 const EMPTY_QUERY: HabitQuery = { q: '', status: '', today: '' };
 const SEARCH_DEBOUNCE_MS = 250;
 
-const sameQuery = (a: HabitQuery, b: HabitQuery) => a.q === b.q && a.status === b.status && a.today === b.today;
+const sameQuery = (a: HabitQuery, b: HabitQuery) =>
+  a.q === b.q && a.status === b.status && a.today === b.today;
 
 @Injectable()
 export class HabitsStore {
@@ -59,7 +60,8 @@ export class HabitsStore {
               const message = toApiError(err).message;
               // Keep the rows only when they match the selected filters and already show the action's result.
               const rowsMatchQuery = this.shownQuery !== null && sameQuery(this.shownQuery, query);
-              if (this.awaitingReload.size > 0 && this.habits().length > 0 && rowsMatchQuery) this.toasts.error(message);
+              if (this.awaitingReload.size > 0 && this.habits().length > 0 && rowsMatchQuery)
+                this.toasts.error(message);
               else this.errorState.set(message);
               return of(null);
             }),
@@ -109,7 +111,10 @@ export class HabitsStore {
     this.setBusy(id, true);
     request.pipe(this.auth.endWithSession()).subscribe({
       next: (updated) => {
-        if (updated) this.habitsState.update((list) => list.map((item) => (item.id === updated.id ? updated : item)));
+        if (updated)
+          this.habitsState.update((list) =>
+            list.map((item) => (item.id === updated.id ? updated : item)),
+          );
       },
       complete: () => {
         if (successMessage) this.toasts.success(successMessage);

@@ -9,7 +9,11 @@ export const unauthorizedInterceptor: HttpInterceptorFn = (request, next) => {
   const router = inject(Router);
   return next(request).pipe(
     catchError((error: unknown) => {
-      if (error instanceof HttpErrorResponse && error.status === 401 && !request.url.startsWith('/api/auth/')) {
+      if (
+        error instanceof HttpErrorResponse &&
+        error.status === 401 &&
+        !request.url.startsWith('/api/auth/')
+      ) {
         auth.clear();
         void router.navigate(['/login']);
       }

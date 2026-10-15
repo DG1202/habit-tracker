@@ -37,7 +37,10 @@ describe('HabitFormDialog', () => {
 
   async function render(habit: Habit | null = null) {
     api = { create: vi.fn(), update: vi.fn() };
-    TestBed.configureTestingModule({ imports: [HabitFormDialog], providers: [{ provide: HabitsApi, useValue: api }] });
+    TestBed.configureTestingModule({
+      imports: [HabitFormDialog],
+      providers: [{ provide: HabitsApi, useValue: api }],
+    });
     fixture = TestBed.createComponent(HabitFormDialog);
     fixture.componentRef.setInput('habit', habit);
     await fixture.whenStable();
@@ -83,19 +86,29 @@ describe('HabitFormDialog', () => {
     type('input[formcontrolname="startDate"]', '2026-10-01');
     await submit();
 
-    expect(api.create).toHaveBeenCalledWith({ name: 'Read', description: '', startDate: '2026-10-01' });
+    expect(api.create).toHaveBeenCalledWith({
+      name: 'Read',
+      description: '',
+      startDate: '2026-10-01',
+    });
     expect(saved).toHaveBeenCalledWith(HABIT);
   });
 
   it('prefills and updates an existing habit', async () => {
     await render(HABIT);
     api.update.mockReturnValue(of({ ...HABIT, name: 'Read more' }));
-    expect(el().querySelector<HTMLInputElement>('input[formcontrolname="name"]')!.value).toBe('Read');
+    expect(el().querySelector<HTMLInputElement>('input[formcontrolname="name"]')!.value).toBe(
+      'Read',
+    );
     expect(el().textContent).toContain('Edit habit');
 
     type('input[formcontrolname="name"]', 'Read more');
     await submit();
-    expect(api.update).toHaveBeenCalledWith('h1', { name: 'Read more', description: '', startDate: '2026-10-01' });
+    expect(api.update).toHaveBeenCalledWith('h1', {
+      name: 'Read more',
+      description: '',
+      startDate: '2026-10-01',
+    });
   });
 
   it('shows server validation errors on the matching field', async () => {
@@ -105,7 +118,13 @@ describe('HabitFormDialog', () => {
         () =>
           new HttpErrorResponse({
             status: 422,
-            error: { error: { code: 'START_DATE_AFTER_CHECKINS', message: 'Start date cannot be after the first check-in', details: [{ path: 'startDate', message: 'Too late' }] } },
+            error: {
+              error: {
+                code: 'START_DATE_AFTER_CHECKINS',
+                message: 'Start date cannot be after the first check-in',
+                details: [{ path: 'startDate', message: 'Too late' }],
+              },
+            },
           }),
       ),
     );
@@ -128,7 +147,9 @@ describe('HabitFormDialog', () => {
       expect(el().querySelector(`label[for="${control.id}"]`)!.textContent!.trim()).toBe(label);
     }
 
-    const description = el().querySelector<HTMLTextAreaElement>('textarea[formcontrolname="description"]')!;
+    const description = el().querySelector<HTMLTextAreaElement>(
+      'textarea[formcontrolname="description"]',
+    )!;
     expect(description.getAttribute('aria-describedby')).toBe('description-hint');
     expect(el().querySelector('#description-hint')!.textContent).toBe('0/500');
 
@@ -137,7 +158,9 @@ describe('HabitFormDialog', () => {
     await submit();
     expect(description.getAttribute('aria-describedby')).toBe('description-hint description-error');
     const startDate = el().querySelector<HTMLInputElement>('input[formcontrolname="startDate"]')!;
-    expect(el().querySelector(`#${startDate.getAttribute('aria-describedby')}`)!.textContent).toBe('Start date is required');
+    expect(el().querySelector(`#${startDate.getAttribute('aria-describedby')}`)!.textContent).toBe(
+      'Start date is required',
+    );
   });
 
   it('moves focus to the first invalid field on submit', async () => {
@@ -154,7 +177,9 @@ describe('HabitFormDialog', () => {
       type('textarea[formcontrolname="description"]', 'y'.repeat(501));
       el().querySelector<HTMLButtonElement>('button[type="submit"]')!.focus();
       await submit();
-      expect(document.activeElement).toBe(el().querySelector('textarea[formcontrolname="description"]'));
+      expect(document.activeElement).toBe(
+        el().querySelector('textarea[formcontrolname="description"]'),
+      );
     } finally {
       fixture.nativeElement.remove();
     }
@@ -190,7 +215,9 @@ describe('HabitFormDialog', () => {
     await fixture.whenStable();
     expect(closed).not.toHaveBeenCalled();
 
-    el().querySelector('dialog')!.dispatchEvent(new Event('cancel', { cancelable: true }));
+    el()
+      .querySelector('dialog')!
+      .dispatchEvent(new Event('cancel', { cancelable: true }));
     await fixture.whenStable();
     expect(closed).not.toHaveBeenCalled();
 
@@ -203,7 +230,13 @@ describe('HabitFormDialog', () => {
   it('clears the server error banner once the user edits a field', async () => {
     await render();
     api.create.mockReturnValue(
-      throwError(() => new HttpErrorResponse({ status: 500, error: { error: { code: 'INTERNAL', message: 'Server exploded', details: [] } } })),
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 500,
+            error: { error: { code: 'INTERNAL', message: 'Server exploded', details: [] } },
+          }),
+      ),
     );
     type('input[formcontrolname="name"]', 'Read');
     await submit();
@@ -215,9 +248,18 @@ describe('HabitFormDialog', () => {
   });
 
   it.each([
-    ['the × button', () => el().querySelector<HTMLButtonElement>('.dialog-header .icon-btn')!.click()],
+    [
+      'the × button',
+      () => el().querySelector<HTMLButtonElement>('.dialog-header .icon-btn')!.click(),
+    ],
     ['Cancel', () => el().querySelector<HTMLButtonElement>('.dialog-footer .btn-ghost')!.click()],
-    ['Esc', () => el().querySelector('dialog')!.dispatchEvent(new Event('cancel', { cancelable: true }))],
+    [
+      'Esc',
+      () =>
+        el()
+          .querySelector('dialog')!
+          .dispatchEvent(new Event('cancel', { cancelable: true })),
+    ],
   ])('emits closed from %s', async (_label, close) => {
     await render();
     const closed = vi.fn();
@@ -229,9 +271,12 @@ describe('HabitFormDialog', () => {
 });
 
 describe('validDate', () => {
-  it.each(['2026-02-30', '2026-13-01', '2026-2-3', '2026-02-28T00:00', 'not a date'])('rejects %s', (value) => {
-    expect(validDate(new FormControl(value, { nonNullable: true }))).toEqual({ date: true });
-  });
+  it.each(['2026-02-30', '2026-13-01', '2026-2-3', '2026-02-28T00:00', 'not a date'])(
+    'rejects %s',
+    (value) => {
+      expect(validDate(new FormControl(value, { nonNullable: true }))).toEqual({ date: true });
+    },
+  );
 
   it.each(['', '2026-02-28', '2024-02-29'])('accepts %j', (value) => {
     expect(validDate(new FormControl(value, { nonNullable: true }))).toBeNull();

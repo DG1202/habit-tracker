@@ -1,5 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting, type TestRequest } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+  type TestRequest,
+} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { vi } from 'vitest';
@@ -7,7 +11,14 @@ import { AuthStore } from './auth-store';
 import type { User } from './models';
 import { ToastService } from './toast-service';
 
-const USER: User = { id: 'u1', provider: 'github', email: null, displayName: 'Alice Test', avatarUrl: null, timezone: 'UTC' };
+const USER: User = {
+  id: 'u1',
+  provider: 'github',
+  email: null,
+  displayName: 'Alice Test',
+  avatarUrl: null,
+  timezone: 'UTC',
+};
 
 describe('AuthStore', () => {
   let auth: AuthStore;
@@ -15,8 +26,12 @@ describe('AuthStore', () => {
   let router: Router;
 
   beforeEach(() => {
-    vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockReturnValue({ timeZone: 'UTC' } as Intl.ResolvedDateTimeFormatOptions);
-    TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });
+    vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockReturnValue({
+      timeZone: 'UTC',
+    } as Intl.ResolvedDateTimeFormatOptions);
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+    });
     auth = TestBed.inject(AuthStore);
     http = TestBed.inject(HttpTestingController);
     router = TestBed.inject(Router);
@@ -29,7 +44,8 @@ describe('AuthStore', () => {
     vi.restoreAllMocks();
   });
 
-  const flushMe = (body: string | object | null, init?: { status: number; statusText: string }) => http.expectOne('/api/auth/me').flush(body, init);
+  const flushMe = (body: string | object | null, init?: { status: number; statusText: string }) =>
+    http.expectOne('/api/auth/me').flush(body, init);
 
   it('loads the user once for concurrent callers', async () => {
     const first = auth.ensureLoaded();
@@ -43,7 +59,10 @@ describe('AuthStore', () => {
 
   it('treats a 401 as signed out and caches it', async () => {
     const result = auth.ensureLoaded();
-    flushMe({ error: { code: 'UNAUTHENTICATED', message: 'Sign in required', details: [] } }, { status: 401, statusText: 'Unauthorized' });
+    flushMe(
+      { error: { code: 'UNAUTHENTICATED', message: 'Sign in required', details: [] } },
+      { status: 401, statusText: 'Unauthorized' },
+    );
     expect(await result).toBeNull();
     expect(auth.user()).toBeNull();
     expect(auth.unreachable()).toBe(false);
@@ -91,7 +110,9 @@ describe('AuthStore', () => {
   });
 
   it('syncs the browser timezone when it differs', async () => {
-    vi.mocked(Intl.DateTimeFormat.prototype.resolvedOptions).mockReturnValue({ timeZone: 'Europe/Kyiv' } as Intl.ResolvedDateTimeFormatOptions);
+    vi.mocked(Intl.DateTimeFormat.prototype.resolvedOptions).mockReturnValue({
+      timeZone: 'Europe/Kyiv',
+    } as Intl.ResolvedDateTimeFormatOptions);
     const result = auth.ensureLoaded();
     flushMe(USER);
     await Promise.resolve();
@@ -103,7 +124,9 @@ describe('AuthStore', () => {
   });
 
   it('keeps the stored timezone when the sync fails', async () => {
-    vi.mocked(Intl.DateTimeFormat.prototype.resolvedOptions).mockReturnValue({ timeZone: 'Europe/Kyiv' } as Intl.ResolvedDateTimeFormatOptions);
+    vi.mocked(Intl.DateTimeFormat.prototype.resolvedOptions).mockReturnValue({
+      timeZone: 'Europe/Kyiv',
+    } as Intl.ResolvedDateTimeFormatOptions);
     const result = auth.ensureLoaded();
     flushMe(USER);
     await Promise.resolve();
@@ -130,8 +153,14 @@ describe('AuthStore', () => {
   });
 
   it.each([
-    ['a 403 (origin check)', (req: TestRequest) => req.flush(null, { status: 403, statusText: 'Forbidden' })],
-    ['a 429 (rate limit)', (req: TestRequest) => req.flush(null, { status: 429, statusText: 'Too Many Requests' })],
+    [
+      'a 403 (origin check)',
+      (req: TestRequest) => req.flush(null, { status: 403, statusText: 'Forbidden' }),
+    ],
+    [
+      'a 429 (rate limit)',
+      (req: TestRequest) => req.flush(null, { status: 429, statusText: 'Too Many Requests' }),
+    ],
     ['a 5xx', (req: TestRequest) => req.flush(null, { status: 502, statusText: 'Bad Gateway' })],
     ['a network error', (req: TestRequest) => req.error(new ProgressEvent('error'))],
   ])('stays signed in and shows an error toast when logout fails with %s', async (_label, fail) => {
@@ -140,6 +169,8 @@ describe('AuthStore', () => {
     fail(http.expectOne('/api/auth/logout'));
     expect(auth.user()).toEqual(USER);
     expect(router.navigate).not.toHaveBeenCalled();
-    expect(TestBed.inject(ToastService).toasts()).toEqual([expect.objectContaining({ kind: 'error', message: "Couldn't sign out. Try again." })]);
+    expect(TestBed.inject(ToastService).toasts()).toEqual([
+      expect.objectContaining({ kind: 'error', message: "Couldn't sign out. Try again." }),
+    ]);
   });
 });

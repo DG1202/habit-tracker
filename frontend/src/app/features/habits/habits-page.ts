@@ -14,10 +14,29 @@ import { HabitsStore } from './habits-store';
   providers: [HabitsStore],
   templateUrl: './habits-page.html',
   styles: `
-    .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-5); flex-wrap: wrap; }
-    .habit-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); transition: opacity 150ms; }
-    .habit-list.is-refreshing { opacity: 0.6; }
-    .skeleton-row { height: 84px; }
+    .page-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--space-4);
+      margin-bottom: var(--space-5);
+      flex-wrap: wrap;
+    }
+    .habit-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      transition: opacity 150ms;
+    }
+    .habit-list.is-refreshing {
+      opacity: 0.6;
+    }
+    .skeleton-row {
+      height: 84px;
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

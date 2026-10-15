@@ -8,7 +8,14 @@ import { routes } from './app.routes';
 import { AuthStore } from './core/auth-store';
 import type { User } from './core/models';
 
-const USER: User = { id: 'u1', provider: 'github', email: null, displayName: 'Alice Test', avatarUrl: null, timezone: 'UTC' };
+const USER: User = {
+  id: 'u1',
+  provider: 'github',
+  email: null,
+  displayName: 'Alice Test',
+  avatarUrl: null,
+  timezone: 'UTC',
+};
 
 describe('app routes', () => {
   async function titleAt(url: string, user: User | null): Promise<string> {
@@ -17,7 +24,14 @@ describe('app routes', () => {
         provideRouter(routes, withComponentInputBinding()),
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: AuthStore, useValue: { user: () => user, ensureLoaded: () => Promise.resolve(user), markUnreachable: () => undefined } },
+        {
+          provide: AuthStore,
+          useValue: {
+            user: () => user,
+            ensureLoaded: () => Promise.resolve(user),
+            markUnreachable: () => undefined,
+          },
+        },
       ],
     });
     const harness = await RouterTestingHarness.create();

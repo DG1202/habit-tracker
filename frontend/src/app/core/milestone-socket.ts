@@ -4,10 +4,13 @@ import { AuthStore } from './auth-store';
 import type { MilestoneMessage } from './models';
 import { ToastService } from './toast-service';
 
-export const WEB_SOCKET_FACTORY = new InjectionToken<(url: string) => WebSocket>('WEB_SOCKET_FACTORY', {
-  providedIn: 'root',
-  factory: () => (url: string) => new WebSocket(url),
-});
+export const WEB_SOCKET_FACTORY = new InjectionToken<(url: string) => WebSocket>(
+  'WEB_SOCKET_FACTORY',
+  {
+    providedIn: 'root',
+    factory: () => (url: string) => new WebSocket(url),
+  },
+);
 
 export type SocketStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -23,7 +26,9 @@ export function socketUrl({ protocol, host }: Pick<Location, 'protocol' | 'host'
   return `${protocol === 'https:' ? 'wss' : 'ws'}://${host}/ws`;
 }
 
-function isMilestone(frame: Record<string, unknown>): frame is Record<string, unknown> & MilestoneMessage {
+function isMilestone(
+  frame: Record<string, unknown>,
+): frame is Record<string, unknown> & MilestoneMessage {
   return (
     frame['type'] === 'milestone' &&
     typeof frame['id'] === 'string' &&
@@ -77,7 +82,8 @@ export class MilestoneSocket {
     this.state.set('connecting');
 
     socket.onopen = () => {
-      if (this.socket === socket) socket.send(JSON.stringify({ type: 'subscribe', topics: ['milestones'] }));
+      if (this.socket === socket)
+        socket.send(JSON.stringify({ type: 'subscribe', topics: ['milestones'] }));
     };
     socket.onmessage = (event: MessageEvent) => {
       if (this.socket === socket) this.handle(event.data);

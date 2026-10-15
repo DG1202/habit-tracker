@@ -38,7 +38,8 @@ describe('MilestoneSocket', () => {
   let auth: { clear: ReturnType<typeof vi.fn> };
   let router: { navigate: ReturnType<typeof vi.fn> };
   const latest = () => FakeSocket.instances.at(-1)!;
-  const acks = (fake: FakeSocket) => fake.sent.filter((frame) => (frame as { type: string }).type === 'ack');
+  const acks = (fake: FakeSocket) =>
+    fake.sent.filter((frame) => (frame as { type: string }).type === 'ack');
 
   beforeEach(() => {
     FakeSocket.instances = [];
@@ -48,7 +49,10 @@ describe('MilestoneSocket', () => {
     router = { navigate: vi.fn().mockResolvedValue(true) };
     TestBed.configureTestingModule({
       providers: [
-        { provide: WEB_SOCKET_FACTORY, useValue: (url: string) => new FakeSocket(url) as unknown as WebSocket },
+        {
+          provide: WEB_SOCKET_FACTORY,
+          useValue: (url: string) => new FakeSocket(url) as unknown as WebSocket,
+        },
         { provide: AuthStore, useValue: auth },
         { provide: Router, useValue: router },
       ],
@@ -77,7 +81,15 @@ describe('MilestoneSocket', () => {
   it('shows a toast per milestone and acks it when dismissed', () => {
     socket.connect('u1');
     latest().open();
-    latest().receive({ type: 'milestone', id: 'n1', habitId: 'h1', habitName: 'Read', milestone: 7, currentStreak: 7, sentAt: '' });
+    latest().receive({
+      type: 'milestone',
+      id: 'n1',
+      habitId: 'h1',
+      habitName: 'Read',
+      milestone: 7,
+      currentStreak: 7,
+      sentAt: '',
+    });
 
     const [toast] = toasts.toasts();
     expect(toast).toMatchObject({ kind: 'milestone', title: '7-day streak!' });
@@ -154,7 +166,14 @@ describe('MilestoneSocket', () => {
   });
 
   it('drops milestone toasts and queued acks itself when the server ends the session (4401)', () => {
-    const frame = { type: 'milestone', habitId: 'h1', habitName: 'Read', milestone: 7, currentStreak: 7, sentAt: '' };
+    const frame = {
+      type: 'milestone',
+      habitId: 'h1',
+      habitName: 'Read',
+      milestone: 7,
+      currentStreak: 7,
+      sentAt: '',
+    };
     socket.connect('u1');
     latest().open();
     latest().receive({ type: 'subscribed' });
@@ -199,7 +218,15 @@ describe('MilestoneSocket', () => {
     expect(toasts.toasts()).toEqual([]);
   });
 
-  const milestoneFrame = { type: 'milestone', id: 'n1', habitId: 'h1', habitName: 'Read', milestone: 7, currentStreak: 7, sentAt: '' };
+  const milestoneFrame = {
+    type: 'milestone',
+    id: 'n1',
+    habitId: 'h1',
+    habitName: 'Read',
+    milestone: 7,
+    currentStreak: 7,
+    sentAt: '',
+  };
 
   it('clears milestone toasts on disconnect without acking them', () => {
     socket.connect('u1');
@@ -268,9 +295,30 @@ describe('MilestoneSocket', () => {
   it('ignores milestone frames with the wrong shape', () => {
     socket.connect('u1');
     latest().open();
-    latest().receive({ type: 'milestone', id: 'n1', habitName: 'Read', milestone: '7', currentStreak: 7 });
-    latest().receive({ type: 'milestone', id: 42, habitId: 'h1', habitName: 'Read', milestone: 7, currentStreak: 7, sentAt: '' });
-    latest().receive({ type: 'milestone', id: 'n2', habitId: 'h1', milestone: 7, currentStreak: 7, sentAt: '' });
+    latest().receive({
+      type: 'milestone',
+      id: 'n1',
+      habitName: 'Read',
+      milestone: '7',
+      currentStreak: 7,
+    });
+    latest().receive({
+      type: 'milestone',
+      id: 42,
+      habitId: 'h1',
+      habitName: 'Read',
+      milestone: 7,
+      currentStreak: 7,
+      sentAt: '',
+    });
+    latest().receive({
+      type: 'milestone',
+      id: 'n2',
+      habitId: 'h1',
+      milestone: 7,
+      currentStreak: 7,
+      sentAt: '',
+    });
     latest().onmessage?.({ data: 'null' });
     expect(toasts.toasts()).toEqual([]);
   });
@@ -284,13 +332,16 @@ describe('MilestoneSocket', () => {
   });
 
   it('builds a wss URL on https and a ws URL on http', () => {
-    expect(socketUrl({ protocol: 'https:', host: 'habits.example.test' })).toBe('wss://habits.example.test/ws');
+    expect(socketUrl({ protocol: 'https:', host: 'habits.example.test' })).toBe(
+      'wss://habits.example.test/ws',
+    );
     expect(socketUrl({ protocol: 'http:', host: 'localhost:4300' })).toBe('ws://localhost:4300/ws');
   });
 
   describe('ack pacing', () => {
     function receiveMilestones(count: number) {
-      for (let i = 1; i <= count; i++) latest().receive({ ...milestoneFrame, id: `n${i}`, habitId: `h${i}` });
+      for (let i = 1; i <= count; i++)
+        latest().receive({ ...milestoneFrame, id: `n${i}`, habitId: `h${i}` });
     }
 
     it('sends at most 4 acks per second when many toasts are dismissed at once', () => {
@@ -306,7 +357,9 @@ describe('MilestoneSocket', () => {
       vi.advanceTimersByTime(1);
       expect(acks(latest())).toHaveLength(5);
       vi.advanceTimersByTime(10_000);
-      expect(acks(latest()).map((frame) => (frame as { id: string }).id)).toEqual(Array.from({ length: 10 }, (_, i) => `n${i + 1}`));
+      expect(acks(latest()).map((frame) => (frame as { id: string }).id)).toEqual(
+        Array.from({ length: 10 }, (_, i) => `n${i + 1}`),
+      );
     });
 
     it('paces a queued flush after reconnecting', () => {
@@ -351,7 +404,7 @@ describe('MilestoneSocket', () => {
       expect(FakeSocket.instances).toHaveLength(1);
     });
 
-    it('drops the previous user\'s toasts and queued acks when another user connects', () => {
+    it("drops the previous user's toasts and queued acks when another user connects", () => {
       socket.connect('u1');
       latest().open();
       latest().receive(milestoneFrame);

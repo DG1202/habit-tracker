@@ -9,8 +9,17 @@ export interface DayCell {
 
 export type WeekRow = (DayCell | null)[];
 
-function dayLabel(year: number, monthIndex: number, day: number, cell: Omit<DayCell, 'label' | 'date' | 'day'>): string {
-  const name = new Date(Date.UTC(year, monthIndex - 1, day)).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
+function dayLabel(
+  year: number,
+  monthIndex: number,
+  day: number,
+  cell: Omit<DayCell, 'label' | 'date' | 'day'>,
+): string {
+  const name = new Date(Date.UTC(year, monthIndex - 1, day)).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
   const parts = [name];
   if (cell.isToday) parts.push('today');
   if (cell.checked) parts.push('checked in');
@@ -19,7 +28,11 @@ function dayLabel(year: number, monthIndex: number, day: number, cell: Omit<DayC
   return parts.join(', ');
 }
 
-export function buildMonthGrid(month: string, checkedDates: readonly string[], today: string): WeekRow[] {
+export function buildMonthGrid(
+  month: string,
+  checkedDates: readonly string[],
+  today: string,
+): WeekRow[] {
   const [year, monthIndex] = month.split('-').map(Number) as [number, number];
   const daysInMonth = new Date(Date.UTC(year, monthIndex, 0)).getUTCDate();
   const mondayFirstOffset = (new Date(Date.UTC(year, monthIndex - 1, 1)).getUTCDay() + 6) % 7;

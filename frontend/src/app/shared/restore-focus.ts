@@ -1,7 +1,9 @@
 import { DestroyRef, DOCUMENT, ElementRef, inject } from '@angular/core';
 
 // If focus is inside the destroyed component or lost to <body>, move it to `returnTo`, else to <main>.
-export function restoreFocusOnDestroy(returnTo: Element | null = inject(DOCUMENT).activeElement): void {
+export function restoreFocusOnDestroy(
+  returnTo: Element | null = inject(DOCUMENT).activeElement,
+): void {
   const document = inject(DOCUMENT);
   const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   inject(DestroyRef).onDestroy(() => {

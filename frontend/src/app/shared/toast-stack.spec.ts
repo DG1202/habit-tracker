@@ -24,7 +24,8 @@ class FakeResizeObserver {
 
 @Component({
   imports: [ToastStack],
-  template: `<main tabindex="-1"><button type="button" id="outside">Outside</button></main><ht-toast-stack />`,
+  template: `<main tabindex="-1"><button type="button" id="outside">Outside</button></main>
+    <ht-toast-stack />`,
 })
 class Host {}
 
@@ -35,7 +36,8 @@ describe('ToastStack', () => {
   const toastEls = () => [...el().querySelectorAll<HTMLElement>('.toast')];
   // Fake timers stall whenStable, so render synchronously.
   const render = () => fixture.detectChanges();
-  const dismissButton = (index: number) => toastEls()[index]!.querySelector<HTMLButtonElement>('button')!;
+  const dismissButton = (index: number) =>
+    toastEls()[index]!.querySelector<HTMLButtonElement>('button')!;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -59,7 +61,10 @@ describe('ToastStack', () => {
     const assertive = el().querySelector('.toasts [role="alert"]')!;
     expect(polite.children).toHaveLength(0);
     expect(assertive.children).toHaveLength(0);
-    expect([polite.getAttribute('aria-atomic'), assertive.getAttribute('aria-atomic')]).toEqual(['false', 'false']);
+    expect([polite.getAttribute('aria-atomic'), assertive.getAttribute('aria-atomic')]).toEqual([
+      'false',
+      'false',
+    ]);
 
     toasts.success('Saved');
     toasts.error('Boom');
@@ -68,14 +73,20 @@ describe('ToastStack', () => {
 
     expect(el().querySelector('.toasts [role="status"]')).toBe(polite);
     expect(el().querySelector('.toasts [role="alert"]')).toBe(assertive);
-    expect([...polite.querySelectorAll('.toast')].map((toast) => toast.getAttribute('data-kind'))).toEqual(['success', 'milestone']);
-    expect([...assertive.querySelectorAll('.toast')].map((toast) => toast.getAttribute('data-kind'))).toEqual(['error']);
+    expect(
+      [...polite.querySelectorAll('.toast')].map((toast) => toast.getAttribute('data-kind')),
+    ).toEqual(['success', 'milestone']);
+    expect(
+      [...assertive.querySelectorAll('.toast')].map((toast) => toast.getAttribute('data-kind')),
+    ).toEqual(['error']);
     expect(el().querySelectorAll('[role]')).toHaveLength(2);
     expect(el().querySelectorAll('[aria-live]')).toHaveLength(0);
-    expect(toastEls().map((toast) => toast.querySelector('button')!.getAttribute('aria-label'))).toEqual(Array(3).fill('Dismiss notification'));
+    expect(
+      toastEls().map((toast) => toast.querySelector('button')!.getAttribute('aria-label')),
+    ).toEqual(Array(3).fill('Dismiss notification'));
   });
 
-  it('dismisses through the button and runs the toast\'s onDismiss', () => {
+  it("dismisses through the button and runs the toast's onDismiss", () => {
     const onDismiss = vi.fn();
     toasts.show({ kind: 'milestone', title: '7-day streak!', message: 'Keep going', onDismiss });
     render();
@@ -193,7 +204,9 @@ describe('ToastStack', () => {
 
     dismissButton(0).focus();
     toasts.dismiss(toasts.toasts()[0]!.id);
-    dismissButton(0).dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
+    dismissButton(0).dispatchEvent(
+      new FocusEvent('focusout', { bubbles: true, relatedTarget: null }),
+    );
     render();
     expect(document.activeElement).toBe(dismissButton(0));
   });

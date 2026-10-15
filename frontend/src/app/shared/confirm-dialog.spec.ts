@@ -23,7 +23,9 @@ describe('ConfirmDialog', () => {
   });
 
   it('does not cancel on a click inside the dialog body', () => {
-    dialog().querySelector('p')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    dialog()
+      .querySelector('p')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(cancelled).not.toHaveBeenCalled();
   });
 

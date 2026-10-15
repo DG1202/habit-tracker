@@ -13,7 +13,10 @@ describe('LoginPage', () => {
 
   it('offers both providers and shows no alert without an error code', async () => {
     await render();
-    const links = [...el().querySelectorAll<HTMLAnchorElement>('a.provider')].map((a) => [a.textContent!.trim(), a.getAttribute('href')]);
+    const links = [...el().querySelectorAll<HTMLAnchorElement>('a.provider')].map((a) => [
+      a.textContent!.trim(),
+      a.getAttribute('href'),
+    ]);
     expect(links).toEqual([
       ['Continue with Google', '/api/auth/google/start'],
       ['Continue with GitHub', '/api/auth/github/start'],

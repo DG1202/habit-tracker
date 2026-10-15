@@ -14,7 +14,13 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NonNullableFormBuilder, ReactiveFormsModule, Validators, type AbstractControl, type ValidationErrors } from '@angular/forms';
+import {
+  NonNullableFormBuilder,
+  ReactiveFormsModule,
+  Validators,
+  type AbstractControl,
+  type ValidationErrors,
+} from '@angular/forms';
 import { finalize } from 'rxjs/operators';
 import { toApiError } from '../../core/api-error';
 import { HabitsApi } from '../../core/habits-api';
@@ -24,12 +30,15 @@ import { restoreFocusOnDestroy } from '../../shared/restore-focus';
 
 type FieldName = 'name' | 'description' | 'startDate';
 
-const notBlank = (control: AbstractControl<string>): ValidationErrors | null => (control.value.trim() ? null : { required: true });
+const notBlank = (control: AbstractControl<string>): ValidationErrors | null =>
+  control.value.trim() ? null : { required: true };
 
 export const validDate = (control: AbstractControl<string>): ValidationErrors | null => {
   if (!control.value) return null;
   const parsed = new Date(`${control.value}T00:00:00Z`);
-  return /^\d{4}-\d{2}-\d{2}$/.test(control.value) && !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === control.value
+  return /^\d{4}-\d{2}-\d{2}$/.test(control.value) &&
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === control.value
     ? null
     : { date: true };
 };
@@ -76,7 +85,12 @@ export class HabitFormDialog implements OnInit {
 
   ngOnInit(): void {
     const habit = this.habit();
-    if (habit) this.form.setValue({ name: habit.name, description: habit.description, startDate: habit.startDate });
+    if (habit)
+      this.form.setValue({
+        name: habit.name,
+        description: habit.description,
+        startDate: habit.startDate,
+      });
   }
 
   protected errorFor(field: FieldName): string | null {
@@ -91,13 +105,20 @@ export class HabitFormDialog implements OnInit {
     this.submitted.set(true);
     this.form.markAllAsTouched();
     if (this.form.invalid) {
-      afterNextRender(() => this.host.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(), { injector: this.injector });
+      afterNextRender(
+        () => this.host.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(),
+        { injector: this.injector },
+      );
       return;
     }
     if (this.saving()) return;
 
     const raw = this.form.getRawValue();
-    const value = { name: raw.name.trim(), description: raw.description.trim(), startDate: raw.startDate };
+    const value = {
+      name: raw.name.trim(),
+      description: raw.description.trim(),
+      startDate: raw.startDate,
+    };
     const habit = this.habit();
     this.saving.set(true);
     this.serverError.set(null);

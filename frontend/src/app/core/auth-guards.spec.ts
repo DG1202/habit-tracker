@@ -6,16 +6,31 @@ import { AuthStore } from './auth-store';
 import { authGuard, guestGuard } from './auth-guards';
 import type { User } from './models';
 
-const USER: User = { id: 'u1', provider: 'google', email: null, displayName: 'Alice Test', avatarUrl: null, timezone: 'UTC' };
+const USER: User = {
+  id: 'u1',
+  provider: 'google',
+  email: null,
+  displayName: 'Alice Test',
+  avatarUrl: null,
+  timezone: 'UTC',
+};
 
 let markUnreachable: ReturnType<typeof vi.fn>;
 
 function run(guard: typeof authGuard, user: User | null | undefined, url = '/') {
   markUnreachable = vi.fn();
   TestBed.configureTestingModule({
-    providers: [provideRouter([]), { provide: AuthStore, useValue: { ensureLoaded: () => Promise.resolve(user), markUnreachable } }],
+    providers: [
+      provideRouter([]),
+      {
+        provide: AuthStore,
+        useValue: { ensureLoaded: () => Promise.resolve(user), markUnreachable },
+      },
+    ],
   });
-  return TestBed.runInInjectionContext(() => guard({} as ActivatedRouteSnapshot, { url } as RouterStateSnapshot)) as Promise<boolean | UrlTree>;
+  return TestBed.runInInjectionContext(() =>
+    guard({} as ActivatedRouteSnapshot, { url } as RouterStateSnapshot),
+  ) as Promise<boolean | UrlTree>;
 }
 
 describe('auth guards', () => {
@@ -40,8 +55,11 @@ describe('auth guards', () => {
   it.each([
     ['authGuard', authGuard],
     ['guestGuard', guestGuard],
-  ])('%s blocks navigation and records the URL when the server is unreachable', async (_name, guard) => {
-    expect(await run(guard, undefined, '/habits/h1')).toBe(false);
-    expect(markUnreachable).toHaveBeenCalledWith('/habits/h1');
-  });
+  ])(
+    '%s blocks navigation and records the URL when the server is unreachable',
+    async (_name, guard) => {
+      expect(await run(guard, undefined, '/habits/h1')).toBe(false);
+      expect(markUnreachable).toHaveBeenCalledWith('/habits/h1');
+    },
+  );
 });

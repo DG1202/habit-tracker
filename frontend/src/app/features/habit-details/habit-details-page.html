@@ -1,7 +1,10 @@
 <a routerLink="/" class="back">← All habits</a>
 
 @if (loading() && !habit()) {
-  <div class="loading" role="status"><div class="spinner" aria-hidden="true"></div><span class="visually-hidden">Loading habit…</span></div>
+  <div class="loading" role="status">
+    <div class="spinner" aria-hidden="true"></div>
+    <span class="visually-hidden">Loading habit…</span>
+  </div>
 } @else if (error(); as message) {
   <ht-error-banner [message]="message" (retry)="load()" />
 } @else if (habit(); as habit) {
@@ -9,7 +12,9 @@
     <section class="card header">
       <div class="title">
         <h1>{{ habit.name }}</h1>
-        <span class="badge" [attr.data-status]="habit.status">{{ statusLabels[habit.status] }}</span>
+        <span class="badge" [attr.data-status]="habit.status">{{
+          statusLabels[habit.status]
+        }}</span>
         <ht-habit-actions
           class="actions"
           [habit]="habit"
@@ -23,27 +28,48 @@
         <p>{{ habit.description }}</p>
       }
       @if (!habit.startsInFuture) {
-        <p class="muted meta">{{ startsAfterToday() ? 'Starts on' : 'Started' }} {{ habit.startDate }}</p>
+        <p class="muted meta">
+          {{ startsAfterToday() ? 'Starts on' : 'Started' }} {{ habit.startDate }}
+        </p>
       }
       @if (habit.status === 'ACTIVE') {
         <div>
           @if (habit.startsInFuture) {
             <button type="button" class="btn" disabled>Starts on {{ habit.startDate }}</button>
           } @else if (habit.stats.checkedInToday) {
-            <button type="button" class="btn btn-success-soft" [disabled]="busy()" (click)="undo()">✓ Done today · Undo</button>
+            <button type="button" class="btn btn-success-soft" [disabled]="busy()" (click)="undo()">
+              ✓ Done today · Undo
+            </button>
           } @else {
-            <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="checkIn()">Check in for today</button>
+            <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="checkIn()">
+              Check in for today
+            </button>
           }
         </div>
       } @else {
-        <p class="muted meta">{{ habit.status === 'PAUSED' ? 'Paused habits cannot be checked in.' : 'Archived habits are read-only.' }}</p>
+        <p class="muted meta">
+          {{
+            habit.status === 'PAUSED'
+              ? 'Paused habits cannot be checked in.'
+              : 'Archived habits are read-only.'
+          }}
+        </p>
       }
     </section>
 
     <dl class="stats">
-      <div class="card stat"><dt>Current streak</dt><dd>🔥 {{ habit.stats.currentStreak }}</dd></div>
-      <div class="card stat"><dt>Best streak</dt><dd>{{ habit.stats.bestStreak }}</dd></div>
-      <div class="card stat"><dt>Total check-ins</dt><dd>{{ habit.stats.totalCheckIns }}</dd></div>
+      <div class="card stat">
+        <dt>Current streak</dt>
+        <dd>🔥 {{ habit.stats.currentStreak }}</dd>
+      </div>
+      <div class="card stat">
+        <dt>Best streak</dt>
+        <dd>{{ habit.stats.bestStreak }}</dd>
+      </div>
+      <div class="card stat">
+        <dt>Total check-ins</dt>
+        <dd>{{ habit.stats.totalCheckIns }}</dd>
+      </div>
     </dl>
 
     @if (habit.stats.totalCheckIns === 0) {
@@ -65,7 +91,12 @@
                 @for (cell of week; track $index) {
                   <td>
                     @if (cell) {
-                      <div class="day" [class.checked]="cell.checked" [class.today]="cell.isToday" [class.future]="cell.isFuture">
+                      <div
+                        class="day"
+                        [class.checked]="cell.checked"
+                        [class.today]="cell.isToday"
+                        [class.future]="cell.isFuture"
+                      >
                         <span aria-hidden="true">{{ cell.day }}</span>
                         <span class="visually-hidden">{{ cell.label }}</span>
                       </div>
@@ -91,7 +122,9 @@
 @if (confirmingDelete() && habit(); as habit) {
   <ht-confirm-dialog
     title="Delete habit?"
-    [message]="'Delete “' + habit.name + '” and its entire check-in history? This cannot be undone.'"
+    [message]="
+      'Delete “' + habit.name + '” and its entire check-in history? This cannot be undone.'
+    "
     confirmLabel="Delete"
     [danger]="true"
     (confirmed)="remove(habit)"

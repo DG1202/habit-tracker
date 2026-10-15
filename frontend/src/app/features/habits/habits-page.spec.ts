@@ -54,8 +54,12 @@ describe('HabitsPage', () => {
   it('shows a loading skeleton, then the "no habits" empty state', async () => {
     await settle();
     const req = http.expectOne((r) => r.url === '/api/habits');
-    expect((fixture.nativeElement as HTMLElement).querySelector('[aria-busy="true"]')).not.toBeNull();
-    expect((fixture.nativeElement as HTMLElement).querySelector('[role="status"]')!.textContent).toContain('Loading habits');
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[aria-busy="true"]'),
+    ).not.toBeNull();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[role="status"]')!.textContent,
+    ).toContain('Loading habits');
 
     req.flush([]);
     await fixture.whenStable();
@@ -69,7 +73,9 @@ describe('HabitsPage', () => {
     await fixture.whenStable();
     expect(text()).toContain('Read 20 pages');
     expect(text()).toContain('Check in');
-    const stats = (fixture.nativeElement as HTMLElement).querySelector('.habit-stats')!.textContent!;
+    const stats = (fixture.nativeElement as HTMLElement).querySelector(
+      '.habit-stats',
+    )!.textContent!;
     expect(stats).toMatch(/Current\s*🔥\s*4/);
     expect(stats).toMatch(/Best\s*9/);
     expect(stats).toMatch(/Total\s*21/);
@@ -80,7 +86,9 @@ describe('HabitsPage', () => {
     http.expectOne((r) => r.url === '/api/habits').flush([HABIT]);
     await fixture.whenStable();
 
-    const search = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('input[type="search"]')!;
+    const search = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      'input[type="search"]',
+    )!;
     search.value = 'zzz';
     search.dispatchEvent(new Event('input'));
     await fixture.whenStable();
@@ -93,7 +101,9 @@ describe('HabitsPage', () => {
     await fixture.whenStable();
     expect(text()).toContain('No habits match your filters');
 
-    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.empty-state button')!.click();
+    (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('.empty-state button')!
+      .click();
     await fixture.whenStable();
     http.expectOne((r) => r.url === '/api/habits' && !r.params.has('q')).flush([HABIT]);
     await fixture.whenStable();
@@ -102,11 +112,18 @@ describe('HabitsPage', () => {
 
   it('shows an error banner with retry when loading fails', async () => {
     await settle();
-    http.expectOne((r) => r.url === '/api/habits').flush({ error: { code: 'INTERNAL', message: 'Server exploded', details: [] } }, { status: 500, statusText: 'Error' });
+    http
+      .expectOne((r) => r.url === '/api/habits')
+      .flush(
+        { error: { code: 'INTERNAL', message: 'Server exploded', details: [] } },
+        { status: 500, statusText: 'Error' },
+      );
     await fixture.whenStable();
     expect(text()).toContain('Server exploded');
 
-    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.alert button')!.click();
+    (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('.alert button')!
+      .click();
     await fixture.whenStable();
     http.expectOne((r) => r.url === '/api/habits').flush([]);
     await fixture.whenStable();
@@ -116,7 +133,9 @@ describe('HabitsPage', () => {
   describe('actions', () => {
     const root = () => fixture.nativeElement as HTMLElement;
     const button = (label: string) =>
-      Array.from(root().querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent!.trim() === label)!;
+      Array.from(root().querySelectorAll<HTMLButtonElement>('button')).find(
+        (b) => b.textContent!.trim() === label,
+      )!;
     const list = () => http.expectOne((r) => r.url === '/api/habits' && r.method === 'GET');
 
     async function load(habit: Habit) {
@@ -146,7 +165,9 @@ describe('HabitsPage', () => {
       button('Check in').click();
       button('Check in').click();
       await fixture.whenStable();
-      http.expectOne('/api/habits/h1/check-ins').flush({ ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } });
+      http
+        .expectOne('/api/habits/h1/check-ins')
+        .flush({ ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } });
       await fixture.whenStable();
       list().flush([{ ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } }]);
       await fixture.whenStable();
@@ -176,24 +197,43 @@ describe('HabitsPage', () => {
       await load(HABIT);
       button('Check in').click();
       await fixture.whenStable();
-      http.expectOne('/api/habits/h1/check-ins').flush({ ...HABIT, stats: { ...HABIT.stats, currentStreak: 5, totalCheckIns: 22, checkedInToday: true } });
+      http.expectOne('/api/habits/h1/check-ins').flush({
+        ...HABIT,
+        stats: { ...HABIT.stats, currentStreak: 5, totalCheckIns: 22, checkedInToday: true },
+      });
       await fixture.whenStable();
-      list().flush({ error: { code: 'INTERNAL', message: 'Server exploded', details: [] } }, { status: 500, statusText: 'Error' });
+      list().flush(
+        { error: { code: 'INTERNAL', message: 'Server exploded', details: [] } },
+        { status: 500, statusText: 'Error' },
+      );
       await fixture.whenStable();
 
       expect(root().querySelector('ht-error-banner')).toBeNull();
       expect(button('✓ Done · Undo').disabled).toBe(false);
       expect(root().querySelector('.habit-stats')!.textContent).toMatch(/Current\s*🔥\s*5/);
-      expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'error' && t.message === 'Server exploded')).toBe(true);
+      expect(
+        TestBed.inject(ToastService)
+          .toasts()
+          .some((t) => t.kind === 'error' && t.message === 'Server exploded'),
+      ).toBe(true);
     });
 
     it('applies the stats from the DELETE response, including best, even when the reload fails', async () => {
-      await load({ ...HABIT, stats: { currentStreak: 9, bestStreak: 9, totalCheckIns: 22, checkedInToday: true } });
+      await load({
+        ...HABIT,
+        stats: { currentStreak: 9, bestStreak: 9, totalCheckIns: 22, checkedInToday: true },
+      });
       button('✓ Done · Undo').click();
       await fixture.whenStable();
-      http.expectOne('/api/habits/h1/check-ins/today').flush({ ...HABIT, stats: { currentStreak: 8, bestStreak: 8, totalCheckIns: 21, checkedInToday: false } });
+      http.expectOne('/api/habits/h1/check-ins/today').flush({
+        ...HABIT,
+        stats: { currentStreak: 8, bestStreak: 8, totalCheckIns: 21, checkedInToday: false },
+      });
       await fixture.whenStable();
-      list().flush({ error: { code: 'INTERNAL', message: 'Server exploded', details: [] } }, { status: 500, statusText: 'Error' });
+      list().flush(
+        { error: { code: 'INTERNAL', message: 'Server exploded', details: [] } },
+        { status: 500, statusText: 'Error' },
+      );
       await fixture.whenStable();
 
       expect(button('Check in').disabled).toBe(false);
@@ -212,19 +252,32 @@ describe('HabitsPage', () => {
     it("follows the server's startsInFuture rather than the client clock", async () => {
       await settle();
       list().flush([
-        { ...HABIT, id: 'past', name: 'Past by client clock', startDate: '2000-01-01', startsInFuture: true },
-        { ...HABIT, id: 'future', name: 'Future by client clock', startDate: '2999-01-01', startsInFuture: false },
+        {
+          ...HABIT,
+          id: 'past',
+          name: 'Past by client clock',
+          startDate: '2000-01-01',
+          startsInFuture: true,
+        },
+        {
+          ...HABIT,
+          id: 'future',
+          name: 'Future by client clock',
+          startDate: '2999-01-01',
+          startsInFuture: false,
+        },
       ]);
       await fixture.whenStable();
       expect(button('Starts on 2000-01-01').disabled).toBe(true);
       expect(button('Starts on 2999-01-01')).toBeUndefined();
-      expect(Array.from(root().querySelectorAll<HTMLButtonElement>('.habit-today button')).map((b) => b.textContent!.trim())).toEqual([
-        'Starts on 2000-01-01',
-        'Check in',
-      ]);
+      expect(
+        Array.from(root().querySelectorAll<HTMLButtonElement>('.habit-today button')).map((b) =>
+          b.textContent!.trim(),
+        ),
+      ).toEqual(['Starts on 2000-01-01', 'Check in']);
     });
 
-    it('undoes today\'s check-in', async () => {
+    it("undoes today's check-in", async () => {
       await load({ ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } });
       button('✓ Done · Undo').click();
       await fixture.whenStable();
@@ -257,19 +310,28 @@ describe('HabitsPage', () => {
       await load(HABIT);
       button('Check in').click();
       await fixture.whenStable();
-      http.expectOne('/api/habits/h1/check-ins').flush({ ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } });
+      http
+        .expectOne('/api/habits/h1/check-ins')
+        .flush({ ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } });
       await fixture.whenStable();
       const reload = list();
 
       button('Paused').click();
       await fixture.whenStable();
       expect(reload.cancelled).toBe(true);
-      list().flush({ error: { code: 'INTERNAL', message: 'Server exploded', details: [] } }, { status: 500, statusText: 'Error' });
+      list().flush(
+        { error: { code: 'INTERNAL', message: 'Server exploded', details: [] } },
+        { status: 500, statusText: 'Error' },
+      );
       await fixture.whenStable();
 
       expect(root().querySelector('ht-error-banner')!.textContent).toContain('Server exploded');
       expect(root().querySelector('ht-habit-row')).toBeNull();
-      expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'error')).toBe(false);
+      expect(
+        TestBed.inject(ToastService)
+          .toasts()
+          .some((t) => t.kind === 'error'),
+      ).toBe(false);
     });
 
     it('shows the banner when an action reload for a newly selected filter fails', async () => {
@@ -283,11 +345,18 @@ describe('HabitsPage', () => {
       post.flush({ ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } });
       await fixture.whenStable();
       expect(chipLoad.cancelled).toBe(true);
-      list().flush({ error: { code: 'INTERNAL', message: 'Server exploded', details: [] } }, { status: 500, statusText: 'Error' });
+      list().flush(
+        { error: { code: 'INTERNAL', message: 'Server exploded', details: [] } },
+        { status: 500, statusText: 'Error' },
+      );
       await fixture.whenStable();
 
       expect(root().querySelector('ht-error-banner')!.textContent).toContain('Server exploded');
-      expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'error')).toBe(false);
+      expect(
+        TestBed.inject(ToastService)
+          .toasts()
+          .some((t) => t.kind === 'error'),
+      ).toBe(false);
     });
 
     it('applies a status chip without waiting for the search debounce', async () => {
@@ -325,7 +394,9 @@ describe('HabitsPage', () => {
       await load(HABIT);
       button('Edit').click();
       await fixture.whenStable();
-      expect(root().querySelector<HTMLInputElement>('dialog input[formcontrolname="name"]')!.value).toBe('Read 20 pages');
+      expect(
+        root().querySelector<HTMLInputElement>('dialog input[formcontrolname="name"]')!.value,
+      ).toBe('Read 20 pages');
 
       root().querySelector<HTMLButtonElement>('dialog .dialog-footer .btn-ghost')!.click();
       await fixture.whenStable();
@@ -358,7 +429,9 @@ describe('HabitsPage', () => {
         const opener = button('Edit');
         await focusAndClick(opener);
         root().querySelector<HTMLInputElement>('dialog input[formcontrolname="name"]')!.focus();
-        root().querySelector('dialog')!.dispatchEvent(new Event('cancel', { cancelable: true }));
+        root()
+          .querySelector('dialog')!
+          .dispatchEvent(new Event('cancel', { cancelable: true }));
         await fixture.whenStable();
         expect(root().querySelector('dialog')).toBeNull();
         expect(document.activeElement).toBe(opener);
@@ -406,7 +479,11 @@ describe('HabitsPage', () => {
       req.flush(null);
       await fixture.whenStable();
 
-      expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'success' && t.message.includes('was deleted'))).toBe(true);
+      expect(
+        TestBed.inject(ToastService)
+          .toasts()
+          .some((t) => t.kind === 'success' && t.message.includes('was deleted')),
+      ).toBe(true);
       list().flush([]);
       await fixture.whenStable();
       expect(root().querySelector('dialog')).toBeNull();
@@ -418,7 +495,14 @@ describe('HabitsPage', () => {
     it('cancels a pending delete when the user signs out, so its response shows no toast', async () => {
       vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
       const loaded = TestBed.inject(AuthStore).ensureLoaded();
-      const user: User = { id: 'u1', provider: 'github', email: null, displayName: 'Alice Test', avatarUrl: null, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+      const user: User = {
+        id: 'u1',
+        provider: 'github',
+        email: null,
+        displayName: 'Alice Test',
+        avatarUrl: null,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      };
       http.expectOne('/api/auth/me').flush(user);
       await loaded;
       await load({ ...HABIT, status: 'ARCHIVED' });
@@ -442,9 +526,16 @@ describe('HabitsPage', () => {
       await fixture.whenStable();
       http
         .expectOne('/api/habits/h1/check-ins')
-        .flush({ error: { code: 'CHECKIN_EXISTS', message: 'Already checked in today', details: [] } }, { status: 409, statusText: 'Conflict' });
+        .flush(
+          { error: { code: 'CHECKIN_EXISTS', message: 'Already checked in today', details: [] } },
+          { status: 409, statusText: 'Conflict' },
+        );
       await fixture.whenStable();
-      expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'error' && t.message === 'Already checked in today')).toBe(true);
+      expect(
+        TestBed.inject(ToastService)
+          .toasts()
+          .some((t) => t.kind === 'error' && t.message === 'Already checked in today'),
+      ).toBe(true);
     });
   });
 });

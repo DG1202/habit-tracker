@@ -7,7 +7,14 @@ import { MilestoneSocket, type SocketStatus } from '../core/milestone-socket';
 import type { User } from '../core/models';
 import { TopBar } from './top-bar';
 
-const USER: User = { id: 'u1', provider: 'github', email: null, displayName: 'Alice Test', avatarUrl: null, timezone: 'UTC' };
+const USER: User = {
+  id: 'u1',
+  provider: 'github',
+  email: null,
+  displayName: 'Alice Test',
+  avatarUrl: null,
+  timezone: 'UTC',
+};
 
 describe('TopBar', () => {
   const user = signal<User | null>(USER);
@@ -64,12 +71,15 @@ describe('TopBar', () => {
     ['connected', 'Live notifications on'],
     ['connecting', 'Connecting…'],
     ['disconnected', 'Live notifications offline'],
-  ] as const)('labels the %s connection state for screen readers and on hover', async (state, label) => {
-    status.set(state);
-    await fixture.whenStable();
-    const connection = el().querySelector('.connection')!;
-    expect(connection.getAttribute('data-status')).toBe(state);
-    expect(connection.getAttribute('title')).toBe(label);
-    expect(connection.querySelector('.visually-hidden')!.textContent).toBe(label);
-  });
+  ] as const)(
+    'labels the %s connection state for screen readers and on hover',
+    async (state, label) => {
+      status.set(state);
+      await fixture.whenStable();
+      const connection = el().querySelector('.connection')!;
+      expect(connection.getAttribute('data-status')).toBe(state);
+      expect(connection.getAttribute('title')).toBe(label);
+      expect(connection.querySelector('.visually-hidden')!.textContent).toBe(label);
+    },
+  );
 });

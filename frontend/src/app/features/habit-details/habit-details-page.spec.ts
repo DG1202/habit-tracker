@@ -20,15 +20,25 @@ const HABIT: Habit = {
   createdAt: '2026-10-01T00:00:00.000Z',
   updatedAt: '2026-10-01T00:00:00.000Z',
 };
-const DONE: Habit = { ...HABIT, stats: { ...HABIT.stats, currentStreak: 3, totalCheckIns: 9, checkedInToday: true } };
-const MONTH: MonthCheckIns = { month: '2026-10', today: '2026-10-15', dates: ['2026-10-13', '2026-10-14'] };
+const DONE: Habit = {
+  ...HABIT,
+  stats: { ...HABIT.stats, currentStreak: 3, totalCheckIns: 9, checkedInToday: true },
+};
+const MONTH: MonthCheckIns = {
+  month: '2026-10',
+  today: '2026-10-15',
+  dates: ['2026-10-13', '2026-10-14'],
+};
 
 describe('HabitDetailsPage', () => {
   let fixture: ComponentFixture<HabitDetailsPage>;
   let http: HttpTestingController;
   const root = () => fixture.nativeElement as HTMLElement;
   const text = () => root().textContent ?? '';
-  const button = (label: string) => Array.from(root().querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent!.trim() === label)!;
+  const button = (label: string) =>
+    Array.from(root().querySelectorAll<HTMLButtonElement>('button')).find(
+      (b) => b.textContent!.trim() === label,
+    )!;
 
   async function flushLoad(habit: Habit) {
     http.expectOne('/api/habits/h1').flush(habit);
@@ -103,13 +113,22 @@ describe('HabitDetailsPage', () => {
     await flushLoad(HABIT);
     await checkIn();
 
-    http.expectOne('/api/habits/h1').flush({ error: { code: 'INTERNAL', message: 'Server exploded', details: [] } }, { status: 500, statusText: 'Error' });
+    http
+      .expectOne('/api/habits/h1')
+      .flush(
+        { error: { code: 'INTERNAL', message: 'Server exploded', details: [] } },
+        { status: 500, statusText: 'Error' },
+      );
     http.expectOne((r) => r.url === '/api/habits/h1/check-ins' && r.method === 'GET');
     await fixture.whenStable();
 
     expect(root().querySelector('ht-error-banner')).toBeNull();
     expect(text()).toContain('Stretch for 10 minutes');
-    expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'error' && t.message === 'Server exploded')).toBe(true);
+    expect(
+      TestBed.inject(ToastService)
+        .toasts()
+        .some((t) => t.kind === 'error' && t.message === 'Server exploded'),
+    ).toBe(true);
     // The POST response is applied before the reload, so the page shows the new state.
     expect(button('✓ Done today · Undo').disabled).toBe(false);
     expect(text()).toMatch(/Current streak\s*🔥 3/);
@@ -118,15 +137,24 @@ describe('HabitDetailsPage', () => {
 
   it('applies the stats from the DELETE response, including best, even when the reload fails', async () => {
     http.expectOne('/api/habits/h1').flush({ ...DONE, stats: { ...DONE.stats, bestStreak: 3 } });
-    http.expectOne('/api/habits/h1/check-ins').flush({ ...MONTH, dates: [...MONTH.dates, MONTH.today] });
+    http
+      .expectOne('/api/habits/h1/check-ins')
+      .flush({ ...MONTH, dates: [...MONTH.dates, MONTH.today] });
     await fixture.whenStable();
     expect(root().querySelectorAll('.day.checked')).toHaveLength(3);
 
     button('✓ Done today · Undo').click();
     await fixture.whenStable();
-    http.expectOne((r) => r.url === '/api/habits/h1/check-ins/today' && r.method === 'DELETE').flush({ ...HABIT, stats: { ...HABIT.stats, bestStreak: 2 } });
+    http
+      .expectOne((r) => r.url === '/api/habits/h1/check-ins/today' && r.method === 'DELETE')
+      .flush({ ...HABIT, stats: { ...HABIT.stats, bestStreak: 2 } });
     await fixture.whenStable();
-    http.expectOne('/api/habits/h1').flush({ error: { code: 'INTERNAL', message: 'Server exploded', details: [] } }, { status: 500, statusText: 'Error' });
+    http
+      .expectOne('/api/habits/h1')
+      .flush(
+        { error: { code: 'INTERNAL', message: 'Server exploded', details: [] } },
+        { status: 500, statusText: 'Error' },
+      );
     http.expectOne((r) => r.url === '/api/habits/h1/check-ins' && r.method === 'GET');
     await fixture.whenStable();
 
@@ -138,7 +166,12 @@ describe('HabitDetailsPage', () => {
   });
 
   it('still shows the error banner when the first load fails', async () => {
-    http.expectOne('/api/habits/h1').flush({ error: { code: 'NOT_FOUND', message: 'Not found', details: [] } }, { status: 404, statusText: 'Not Found' });
+    http
+      .expectOne('/api/habits/h1')
+      .flush(
+        { error: { code: 'NOT_FOUND', message: 'Not found', details: [] } },
+        { status: 404, statusText: 'Not Found' },
+      );
     http.expectOne('/api/habits/h1/check-ins');
     await fixture.whenStable();
     expect(root().querySelector('ht-error-banner')).not.toBeNull();
@@ -158,11 +191,14 @@ describe('HabitDetailsPage', () => {
     expect(text()).toContain('Started 2026-10-01');
   });
 
-  it.each(['PAUSED', 'ARCHIVED'] as const)('says "Starts on" for a %s habit whose start date is after the server today', async (status) => {
-    await flushLoad({ ...HABIT, status, startDate: '2026-10-20', startsInFuture: false });
-    expect(text()).toContain('Starts on 2026-10-20');
-    expect(text()).not.toContain('Started');
-  });
+  it.each(['PAUSED', 'ARCHIVED'] as const)(
+    'says "Starts on" for a %s habit whose start date is after the server today',
+    async (status) => {
+      await flushLoad({ ...HABIT, status, startDate: '2026-10-20', startsInFuture: false });
+      expect(text()).toContain('Starts on 2026-10-20');
+      expect(text()).not.toContain('Started');
+    },
+  );
 
   it('keeps "Started" for a paused habit whose start date is the server today', async () => {
     await flushLoad({ ...HABIT, status: 'PAUSED', startDate: MONTH.today });
@@ -170,7 +206,11 @@ describe('HabitDetailsPage', () => {
   });
 
   describe('empty state copy', () => {
-    const empty = (over: Partial<Habit>): Habit => ({ ...HABIT, ...over, stats: { ...HABIT.stats, totalCheckIns: 0 } });
+    const empty = (over: Partial<Habit>): Habit => ({
+      ...HABIT,
+      ...over,
+      stats: { ...HABIT.stats, totalCheckIns: 0 },
+    });
 
     it('says when check-ins open for an active habit that starts in the future', async () => {
       await flushLoad(empty({ startDate: '2026-10-20', startsInFuture: true }));
@@ -203,11 +243,15 @@ describe('HabitDetailsPage', () => {
   it('renders the month as a table with weekday headers and readable day labels', async () => {
     await flushLoad(HABIT);
     const table = root().querySelector('table')!;
-    expect(Array.from(table.querySelectorAll('thead th[scope="col"]')).map((th) => th.getAttribute('abbr'))).toEqual([
-      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
-    ]);
+    expect(
+      Array.from(table.querySelectorAll('thead th[scope="col"]')).map((th) =>
+        th.getAttribute('abbr'),
+      ),
+    ).toEqual(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
     expect(table.querySelectorAll('tbody tr')).toHaveLength(5);
-    const labels = Array.from(table.querySelectorAll('tbody td .visually-hidden')).map((el) => el.textContent!.trim());
+    const labels = Array.from(table.querySelectorAll('tbody td .visually-hidden')).map((el) =>
+      el.textContent!.trim(),
+    );
     expect(labels).toContain('October 14, checked in');
     expect(labels).toContain('October 15, today');
     expect(labels).toContain('October 16, future');
@@ -274,7 +318,9 @@ describe('HabitDetailsPage', () => {
       await flushLoad(HABIT);
       button('Check in for today').click();
       await fixture.whenStable();
-      const post = http.expectOne((r) => r.url === '/api/habits/h1/check-ins' && r.method === 'POST');
+      const post = http.expectOne(
+        (r) => r.url === '/api/habits/h1/check-ins' && r.method === 'POST',
+      );
 
       await switchToH2();
       expect(post.cancelled).toBe(true);
@@ -326,7 +372,14 @@ describe('HabitDetailsPage', () => {
   });
 
   describe('when the user signs out', () => {
-    const USER: User = { id: 'u1', provider: 'github', email: null, displayName: 'Alice Test', avatarUrl: null, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+    const USER: User = {
+      id: 'u1',
+      provider: 'github',
+      email: null,
+      displayName: 'Alice Test',
+      avatarUrl: null,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
     let navigate: ReturnType<typeof vi.spyOn>;
 
     beforeEach(async () => {
@@ -355,7 +408,9 @@ describe('HabitDetailsPage', () => {
       await flushLoad(HABIT);
       button('Check in for today').click();
       await fixture.whenStable();
-      const post = http.expectOne((r) => r.url === '/api/habits/h1/check-ins' && r.method === 'POST');
+      const post = http.expectOne(
+        (r) => r.url === '/api/habits/h1/check-ins' && r.method === 'POST',
+      );
       await signOut();
       expect(post.cancelled).toBe(true);
       expect(TestBed.inject(ToastService).toasts()).toEqual([]);
@@ -363,11 +418,14 @@ describe('HabitDetailsPage', () => {
   });
 
   describe('status actions', () => {
-    const labels = () => Array.from(root().querySelectorAll('ht-habit-actions button')).map((b) => b.textContent!.trim());
+    const labels = () =>
+      Array.from(root().querySelectorAll('ht-habit-actions button')).map((b) =>
+        b.textContent!.trim(),
+      );
     const PAUSED: Habit = { ...HABIT, status: 'PAUSED' };
     const ARCHIVED: Habit = { ...HABIT, status: 'ARCHIVED' };
 
-    it('follows the list\'s status rules', async () => {
+    it("follows the list's status rules", async () => {
       await flushLoad(HABIT);
       expect(labels()).toEqual(['Edit', 'Pause', 'Archive']);
     });
@@ -456,7 +514,9 @@ describe('HabitDetailsPage', () => {
       root().querySelector('dialog')!.setAttribute('open', '');
       button('Cancel').focus();
       expect(document.activeElement).toBe(button('Cancel'));
-      root().querySelector('dialog')!.dispatchEvent(new Event('cancel', { cancelable: true }));
+      root()
+        .querySelector('dialog')!
+        .dispatchEvent(new Event('cancel', { cancelable: true }));
       await fixture.whenStable();
 
       expect(root().querySelector('dialog')).toBeNull();
@@ -480,10 +540,18 @@ describe('HabitDetailsPage', () => {
       await fixture.whenStable();
       root().querySelector<HTMLButtonElement>('dialog .btn-primary')!.click();
       await fixture.whenStable();
-      http.expectOne((r) => r.url === '/api/habits/h1' && r.method === 'DELETE').flush(null, { status: 204, statusText: 'No Content' });
+      http
+        .expectOne((r) => r.url === '/api/habits/h1' && r.method === 'DELETE')
+        .flush(null, { status: 204, statusText: 'No Content' });
       await fixture.whenStable();
 
-      expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'success' && t.message === '"Stretch for 10 minutes" was deleted')).toBe(true);
+      expect(
+        TestBed.inject(ToastService)
+          .toasts()
+          .some(
+            (t) => t.kind === 'success' && t.message === '"Stretch for 10 minutes" was deleted',
+          ),
+      ).toBe(true);
       expect(navigate).toHaveBeenCalledWith(['/']);
       expect(confirmSpy).not.toHaveBeenCalled();
     });
@@ -497,10 +565,23 @@ describe('HabitDetailsPage', () => {
       await fixture.whenStable();
       http
         .expectOne((r) => r.method === 'DELETE')
-        .flush({ error: { code: 'HABIT_NOT_ARCHIVED', message: 'Only archived habits can be deleted', details: [] } }, { status: 409, statusText: 'Conflict' });
+        .flush(
+          {
+            error: {
+              code: 'HABIT_NOT_ARCHIVED',
+              message: 'Only archived habits can be deleted',
+              details: [],
+            },
+          },
+          { status: 409, statusText: 'Conflict' },
+        );
       await fixture.whenStable();
 
-      expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'error' && t.message === 'Only archived habits can be deleted')).toBe(true);
+      expect(
+        TestBed.inject(ToastService)
+          .toasts()
+          .some((t) => t.kind === 'error' && t.message === 'Only archived habits can be deleted'),
+      ).toBe(true);
       expect(navigate).not.toHaveBeenCalled();
       expect(button('Delete').disabled).toBe(false);
     });

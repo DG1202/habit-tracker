@@ -65,7 +65,10 @@ export class ToastService {
   }
 
   private scheduleHide(id: number): void {
-    this.timers.set(id, setTimeout(() => this.remove(id), AUTO_HIDE_MS));
+    this.timers.set(
+      id,
+      setTimeout(() => this.remove(id), AUTO_HIDE_MS),
+    );
   }
 
   private remove(id: number): void {

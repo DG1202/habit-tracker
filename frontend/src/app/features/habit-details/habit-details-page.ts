@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
@@ -22,28 +32,115 @@ import { buildMonthGrid } from './month-grid';
   imports: [RouterLink, EmptyState, ErrorBanner, HabitActions, HabitFormDialog, ConfirmDialog],
   templateUrl: './habit-details-page.html',
   styles: `
-    .back { display: inline-block; margin-bottom: var(--space-4); font-size: var(--text-sm); }
-    .loading { display: grid; place-items: center; padding: var(--space-7); }
-    .details { display: flex; flex-direction: column; gap: var(--space-5); }
-    .header { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
-    .title { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
-    .actions { margin-left: auto; }
-    .header h1, .header p { overflow-wrap: anywhere; }
-    .meta { font-size: var(--text-sm); }
-    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
-    .stat { padding: var(--space-4); text-align: center; }
-    .stat dt { font-size: var(--text-sm); color: var(--color-muted); }
-    .stat dd { margin: var(--space-1) 0 0; font-size: 2rem; font-weight: 700; }
-    .calendar { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
-    .grid { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: var(--space-1); }
-    .grid th { font-size: var(--text-xs); color: var(--color-muted); font-weight: 600; }
-    .grid td { padding: 0; }
-    .day { aspect-ratio: 1; display: grid; place-items: center; border-radius: var(--radius-sm); font-size: var(--text-sm); background: var(--color-bg); }
-    .day.checked { background: var(--color-success); color: var(--color-on-accent); font-weight: 700; }
-    .day.today { box-shadow: inset 0 0 0 2px var(--color-primary); }
-    .day.today.checked { box-shadow: inset 0 0 0 2px var(--color-text), inset 0 0 0 4px var(--color-on-accent); }
-    .day.future { color: var(--color-muted); background: transparent; }
-    @media (max-width: 600px) { .stat dd { font-size: 1.5rem; } .header, .calendar { padding: var(--space-4); } }
+    .back {
+      display: inline-block;
+      margin-bottom: var(--space-4);
+      font-size: var(--text-sm);
+    }
+    .loading {
+      display: grid;
+      place-items: center;
+      padding: var(--space-7);
+    }
+    .details {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+    .header {
+      padding: var(--space-5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+    .title {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+    }
+    .actions {
+      margin-left: auto;
+    }
+    .header h1,
+    .header p {
+      overflow-wrap: anywhere;
+    }
+    .meta {
+      font-size: var(--text-sm);
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-3);
+    }
+    .stat {
+      padding: var(--space-4);
+      text-align: center;
+    }
+    .stat dt {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+    .stat dd {
+      margin: var(--space-1) 0 0;
+      font-size: 2rem;
+      font-weight: 700;
+    }
+    .calendar {
+      padding: var(--space-5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+    .grid {
+      width: 100%;
+      table-layout: fixed;
+      border-collapse: separate;
+      border-spacing: var(--space-1);
+    }
+    .grid th {
+      font-size: var(--text-xs);
+      color: var(--color-muted);
+      font-weight: 600;
+    }
+    .grid td {
+      padding: 0;
+    }
+    .day {
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border-radius: var(--radius-sm);
+      font-size: var(--text-sm);
+      background: var(--color-bg);
+    }
+    .day.checked {
+      background: var(--color-success);
+      color: var(--color-on-accent);
+      font-weight: 700;
+    }
+    .day.today {
+      box-shadow: inset 0 0 0 2px var(--color-primary);
+    }
+    .day.today.checked {
+      box-shadow:
+        inset 0 0 0 2px var(--color-text),
+        inset 0 0 0 4px var(--color-on-accent);
+    }
+    .day.future {
+      color: var(--color-muted);
+      background: transparent;
+    }
+    @media (max-width: 600px) {
+      .stat dd {
+        font-size: 1.5rem;
+      }
+      .header,
+      .calendar {
+        padding: var(--space-4);
+      }
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -65,7 +162,15 @@ export class HabitDetailsPage {
   protected readonly editing = signal(false);
   protected readonly confirmingDelete = signal(false);
   protected readonly statusLabels = STATUS_LABELS;
-  protected readonly weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((full) => ({ full, short: full.slice(0, 3) }));
+  protected readonly weekdays = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ].map((full) => ({ full, short: full.slice(0, 3) }));
   private loadSubscription: Subscription | null = null;
   private actionSubscription: Subscription | null = null;
 
@@ -90,7 +195,13 @@ export class HabitDetailsPage {
 
   protected readonly monthLabel = computed(() => {
     const month = this.month()?.month;
-    return month ? new Date(`${month}-01T00:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
+    return month
+      ? new Date(`${month}-01T00:00:00Z`).toLocaleDateString(undefined, {
+          month: 'long',
+          year: 'numeric',
+          timeZone: 'UTC',
+        })
+      : '';
   });
 
   constructor() {
@@ -118,7 +229,10 @@ export class HabitDetailsPage {
     this.loading.set(true);
     this.error.set(null);
     this.loadSubscription?.unsubscribe();
-    this.loadSubscription = forkJoin({ habit: this.api.get(this.id()), month: this.api.month(this.id()) })
+    this.loadSubscription = forkJoin({
+      habit: this.api.get(this.id()),
+      month: this.api.month(this.id()),
+    })
       .pipe(
         finalize(() => {
           this.loading.set(false);
@@ -133,7 +247,8 @@ export class HabitDetailsPage {
         },
         error: (err: unknown) => {
           const error = toApiError(err);
-          const message = error.status === 404 ? 'This habit does not exist or is not yours.' : error.message;
+          const message =
+            error.status === 404 ? 'This habit does not exist or is not yours.' : error.message;
           // A reload after a mutation keeps the loaded page; only the first load shows the banner.
           if (this.habit()) this.toasts.error(message);
           else this.error.set(message);

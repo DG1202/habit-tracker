@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, effect, ElementRef, inject, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  effect,
+  ElementRef,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, skip } from 'rxjs/operators';
@@ -17,7 +24,10 @@ import { TopBar } from './shared/top-bar';
     }
     <main #main class="page" tabindex="-1">
       @if (auth.unreachable()) {
-        <ht-error-banner message="Cannot reach the server. Check your connection and try again." (retry)="auth.retry()" />
+        <ht-error-banner
+          message="Cannot reach the server. Check your connection and try again."
+          (retry)="auth.retry()"
+        />
       }
       <router-outlet />
     </main>

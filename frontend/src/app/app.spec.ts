@@ -7,7 +7,14 @@ import { AuthStore } from './core/auth-store';
 import { MilestoneSocket } from './core/milestone-socket';
 import type { User } from './core/models';
 
-const ALICE: User = { id: 'u1', provider: 'google', email: null, displayName: 'Alice Test', avatarUrl: null, timezone: 'UTC' };
+const ALICE: User = {
+  id: 'u1',
+  provider: 'google',
+  email: null,
+  displayName: 'Alice Test',
+  avatarUrl: null,
+  timezone: 'UTC',
+};
 const BOB: User = { ...ALICE, id: 'u2', displayName: 'Bob Test' };
 
 @Component({ template: '<button type="button">Page action</button>' })
@@ -18,7 +25,11 @@ describe('App', () => {
   const unreachable = signal(false);
   const retry = vi.fn();
   let fixture: ComponentFixture<App>;
-  let socket: { connect: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn>; status: () => string };
+  let socket: {
+    connect: ReturnType<typeof vi.fn>;
+    disconnect: ReturnType<typeof vi.fn>;
+    status: () => string;
+  };
 
   beforeEach(async () => {
     user.set(undefined);
@@ -26,7 +37,13 @@ describe('App', () => {
     retry.mockClear();
     socket = { connect: vi.fn(), disconnect: vi.fn(), status: () => 'disconnected' };
     // jsdom has no ResizeObserver; ToastStack needs one.
-    vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      },
+    );
     TestBed.configureTestingModule({
       imports: [App],
       providers: [

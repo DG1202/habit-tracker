@@ -1,4 +1,15 @@
-import { afterNextRender, afterRenderEffect, ChangeDetectionStrategy, Component, computed, DestroyRef, DOCUMENT, ElementRef, inject, viewChild } from '@angular/core';
+import {
+  afterNextRender,
+  afterRenderEffect,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  DOCUMENT,
+  ElementRef,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { ToastService } from '../core/toast-service';
 
 @Component({
@@ -17,12 +28,21 @@ import { ToastService } from '../core/toast-service';
               (focusin)="onFocusIn(toast.id, region.offset + index)"
               (focusout)="onFocusOut($event, toast.id)"
             >
-              <span class="toast-icon" aria-hidden="true">{{ toast.kind === 'milestone' ? '🏆' : toast.kind === 'error' ? '⚠️' : '✓' }}</span>
+              <span class="toast-icon" aria-hidden="true">{{
+                toast.kind === 'milestone' ? '🏆' : toast.kind === 'error' ? '⚠️' : '✓'
+              }}</span>
               <div class="toast-text">
                 <strong>{{ toast.title }}</strong>
                 <span>{{ toast.message }}</span>
               </div>
-              <button type="button" class="icon-btn" aria-label="Dismiss notification" (click)="toastService.dismiss(toast.id)">×</button>
+              <button
+                type="button"
+                class="icon-btn"
+                aria-label="Dismiss notification"
+                (click)="toastService.dismiss(toast.id)"
+              >
+                ×
+              </button>
             </div>
           }
         </div>
@@ -30,17 +50,69 @@ import { ToastService } from '../core/toast-service';
     </div>
   `,
   styles: `
-    .toasts { position: fixed; bottom: var(--space-4); right: var(--space-4); z-index: 1000; display: flex; flex-direction: column; width: min(380px, calc(100vw - 2 * var(--space-4))); max-height: 50dvh; overflow-y: auto; overscroll-behavior: contain; }
-    @media (max-width: 600px) { .toasts { left: var(--space-4); width: auto; } }
-    .toast-region { display: flex; flex-direction: column; gap: var(--space-2); }
-    .toast-region:not(:empty) ~ .toast-region:not(:empty) { margin-top: var(--space-2); }
-    .toast { display: flex; flex-shrink: 0; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); box-shadow: var(--shadow); animation: slide-in 180ms ease-out; border-left: 4px solid var(--color-primary); }
-    .toast[data-kind='error'] { border-left-color: var(--color-danger); }
-    .toast[data-kind='success'] { border-left-color: var(--color-success); }
-    .toast[data-kind='milestone'] { border-left-color: var(--color-milestone); background: var(--color-milestone-soft); }
-    .toast-icon { font-size: 1.25rem; }
-    .toast-text { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: var(--text-sm); overflow-wrap: anywhere; }
-    @keyframes slide-in { from { opacity: 0; transform: translateY(8px); } }
+    .toasts {
+      position: fixed;
+      bottom: var(--space-4);
+      right: var(--space-4);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      width: min(380px, calc(100vw - 2 * var(--space-4)));
+      max-height: 50dvh;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+    @media (max-width: 600px) {
+      .toasts {
+        left: var(--space-4);
+        width: auto;
+      }
+    }
+    .toast-region {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    .toast-region:not(:empty) ~ .toast-region:not(:empty) {
+      margin-top: var(--space-2);
+    }
+    .toast {
+      display: flex;
+      flex-shrink: 0;
+      align-items: flex-start;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      box-shadow: var(--shadow);
+      animation: slide-in 180ms ease-out;
+      border-left: 4px solid var(--color-primary);
+    }
+    .toast[data-kind='error'] {
+      border-left-color: var(--color-danger);
+    }
+    .toast[data-kind='success'] {
+      border-left-color: var(--color-success);
+    }
+    .toast[data-kind='milestone'] {
+      border-left-color: var(--color-milestone);
+      background: var(--color-milestone-soft);
+    }
+    .toast-icon {
+      font-size: 1.25rem;
+    }
+    .toast-text {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      font-size: var(--text-sm);
+      overflow-wrap: anywhere;
+    }
+    @keyframes slide-in {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -54,7 +126,11 @@ export class ToastStack {
     const polite = all.filter((toast) => toast.kind !== 'error');
     return [
       { role: 'status', toasts: polite, offset: 0 },
-      { role: 'alert', toasts: all.filter((toast) => toast.kind === 'error'), offset: polite.length },
+      {
+        role: 'alert',
+        toasts: all.filter((toast) => toast.kind === 'error'),
+        offset: polite.length,
+      },
     ];
   });
   private focused: { id: number; index: number } | null = null;
@@ -65,7 +141,9 @@ export class ToastStack {
     // Pages reserve this much bottom space so the stack never hides focused content or the last rows.
     afterNextRender(() => {
       const stack = this.stack().nativeElement;
-      const observer = new ResizeObserver(() => root.style.setProperty('--toast-stack-h', `${stack.offsetHeight}px`));
+      const observer = new ResizeObserver(() =>
+        root.style.setProperty('--toast-stack-h', `${stack.offsetHeight}px`),
+      );
       observer.observe(stack);
       destroyRef.onDestroy(() => {
         observer.disconnect();
@@ -80,7 +158,11 @@ export class ToastStack {
       const active = this.document.activeElement;
       if (active && active !== this.document.body) return;
       const buttons = this.stack().nativeElement.querySelectorAll<HTMLElement>('.toast .icon-btn');
-      (buttons[focused.index] ?? buttons[focused.index - 1] ?? this.document.querySelector<HTMLElement>('main'))?.focus();
+      (
+        buttons[focused.index] ??
+        buttons[focused.index - 1] ??
+        this.document.querySelector<HTMLElement>('main')
+      )?.focus();
     });
   }
 
