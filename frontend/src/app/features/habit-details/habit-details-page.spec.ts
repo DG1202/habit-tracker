@@ -57,10 +57,11 @@ describe('HabitDetailsPage', () => {
     await flushLoad(HABIT);
     await checkIn();
 
-    expect(button('Check in for today').disabled).toBe(true);
-    button('Check in for today').click();
+    // The POST response is already applied, so the page shows Undo, still disabled until the reload lands.
+    expect(button('✓ Done today · Undo').disabled).toBe(true);
+    button('✓ Done today · Undo').click();
     await fixture.whenStable();
-    http.expectNone((r) => r.url === '/api/habits/h1/check-ins' && r.method === 'POST');
+    http.expectNone((r) => r.url === '/api/habits/h1/check-ins/today' && r.method === 'DELETE');
 
     await flushLoad(DONE);
     expect(button('✓ Done today · Undo').disabled).toBe(false);
@@ -77,7 +78,30 @@ describe('HabitDetailsPage', () => {
     expect(root().querySelector('ht-error-banner')).toBeNull();
     expect(text()).toContain('Stretch for 10 minutes');
     expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'error' && t.message === 'Server exploded')).toBe(true);
+    // The POST response is applied before the reload, so the page shows the new state.
+    expect(button('✓ Done today · Undo').disabled).toBe(false);
+    expect(text()).toMatch(/Current streak\s*🔥 3/);
+    expect(root().querySelectorAll('.day.checked')).toHaveLength(3);
+  });
+
+  it('shows the undone state right after the DELETE even when the reload fails', async () => {
+    http.expectOne('/api/habits/h1').flush(DONE);
+    http.expectOne('/api/habits/h1/check-ins').flush({ ...MONTH, dates: [...MONTH.dates, MONTH.today] });
+    await fixture.whenStable();
+    expect(root().querySelectorAll('.day.checked')).toHaveLength(3);
+
+    button('✓ Done today · Undo').click();
+    await fixture.whenStable();
+    http.expectOne((r) => r.url === '/api/habits/h1/check-ins/today' && r.method === 'DELETE').flush(null, { status: 204, statusText: 'No Content' });
+    await fixture.whenStable();
+    http.expectOne('/api/habits/h1').flush({ error: { code: 'INTERNAL', message: 'Server exploded', details: [] } }, { status: 500, statusText: 'Error' });
+    http.expectOne((r) => r.url === '/api/habits/h1/check-ins' && r.method === 'GET');
+    await fixture.whenStable();
+
     expect(button('Check in for today').disabled).toBe(false);
+    expect(text()).toMatch(/Current streak\s*🔥 2/);
+    expect(text()).toMatch(/Total check-ins\s*8/);
+    expect(root().querySelectorAll('.day.checked')).toHaveLength(2);
   });
 
   it('still shows the error banner when the first load fails', async () => {

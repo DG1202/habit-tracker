@@ -2,8 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { forkJoin, type Observable } from 'rxjs';
-import { finalize } from 'rxjs/operators';
+import { finalize, map } from 'rxjs/operators';
 import { toApiError } from '../../core/api-error';
+import { withoutTodayCheckIn } from '../../core/habit-updates';
 import { HabitsApi } from '../../core/habits-api';
 import type { Habit, MonthCheckIns } from '../../core/models';
 import { ToastService } from '../../core/toast-service';
@@ -98,18 +99,29 @@ export class HabitDetailsPage implements OnInit {
   }
 
   protected undo(): void {
-    this.mutate(this.api.undoCheckIn(this.id()));
+    const habit = this.habit();
+    if (habit) this.mutate(this.api.undoCheckIn(habit.id).pipe(map(() => withoutTodayCheckIn(habit))));
   }
 
-  private mutate(request: Observable<unknown>): void {
+  private mutate(request: Observable<Habit>): void {
     // load() clears busy when the reload settles, so a second click cannot race it.
     this.busy.set(true);
     request.subscribe({
+      next: (habit) => this.apply(habit),
       complete: () => this.load(),
       error: (err: unknown) => {
         this.busy.set(false);
         this.toasts.error(toApiError(err).message);
       },
+    });
+  }
+
+  private apply(habit: Habit): void {
+    this.habit.set(habit);
+    this.month.update((month) => {
+      if (!month) return month;
+      const dates = month.dates.filter((date) => date !== month.today);
+      return { ...month, dates: habit.stats.checkedInToday ? [...dates, month.today] : dates };
     });
   }
 }

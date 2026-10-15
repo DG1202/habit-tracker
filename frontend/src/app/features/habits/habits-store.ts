@@ -3,6 +3,7 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { merge, of, Subject, type Observable } from 'rxjs';
 import { catchError, debounceTime, map, switchMap } from 'rxjs/operators';
 import { toApiError } from '../../core/api-error';
+import { withoutTodayCheckIn } from '../../core/habit-updates';
 import { HabitsApi } from '../../core/habits-api';
 import type { Habit, HabitQuery, HabitStatus } from '../../core/models';
 import { ToastService } from '../../core/toast-service';
@@ -34,7 +35,10 @@ export class HabitsStore {
           this.error.set(null);
           return this.api.list(query).pipe(
             catchError((err: unknown) => {
-              this.error.set(toApiError(err).message);
+              const message = toApiError(err).message;
+              // A failed reload after an action keeps the list, which already shows the action's result.
+              if (this.awaitingReload.size > 0 && this.habits().length > 0) this.toasts.error(message);
+              else this.error.set(message);
               return of(null);
             }),
           );
@@ -66,7 +70,7 @@ export class HabitsStore {
   }
 
   undo(habit: Habit): void {
-    this.run(habit.id, this.api.undoCheckIn(habit.id));
+    this.run(habit.id, this.api.undoCheckIn(habit.id).pipe(map(() => withoutTodayCheckIn(habit))));
   }
 
   setStatus(habit: Habit, status: HabitStatus): void {
@@ -77,9 +81,12 @@ export class HabitsStore {
     this.run(habit.id, this.api.remove(habit.id), `"${habit.name}" was deleted`);
   }
 
-  private run(id: string, request: Observable<unknown>, successMessage?: string): void {
+  private run(id: string, request: Observable<Habit | void>, successMessage?: string): void {
     this.setBusy(id, true);
     request.subscribe({
+      next: (updated) => {
+        if (updated) this.habits.update((list) => list.map((item) => (item.id === updated.id ? updated : item)));
+      },
       complete: () => {
         if (successMessage) this.toasts.success(successMessage);
         // Stay busy until the list reflects the change, or a second click would hit a 409/404.

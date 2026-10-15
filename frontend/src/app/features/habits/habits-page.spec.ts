@@ -143,14 +143,45 @@ describe('HabitsPage', () => {
       await fixture.whenStable();
 
       const reload = list();
-      expect(button('Check in').disabled).toBe(true);
-      button('Check in').click();
+      // The POST response is already applied, so the row shows Undo, still disabled until the reload lands.
+      expect(button('✓ Done · Undo').disabled).toBe(true);
+      button('✓ Done · Undo').click();
       await fixture.whenStable();
-      http.expectNone('/api/habits/h1/check-ins');
+      http.expectNone('/api/habits/h1/check-ins/today');
 
       reload.flush([done]);
       await fixture.whenStable();
       expect(button('✓ Done · Undo').disabled).toBe(false);
+    });
+
+    it('shows the checked-in state from the POST response even when the reload fails', async () => {
+      await load(HABIT);
+      button('Check in').click();
+      await fixture.whenStable();
+      http.expectOne('/api/habits/h1/check-ins').flush({ ...HABIT, stats: { ...HABIT.stats, currentStreak: 5, totalCheckIns: 22, checkedInToday: true } });
+      await fixture.whenStable();
+      list().flush({ error: { code: 'INTERNAL', message: 'Server exploded', details: [] } }, { status: 500, statusText: 'Error' });
+      await fixture.whenStable();
+
+      expect(root().querySelector('ht-error-banner')).toBeNull();
+      expect(button('✓ Done · Undo').disabled).toBe(false);
+      expect(root().querySelector('.habit-stats')!.textContent).toMatch(/Current\s*🔥\s*5/);
+      expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'error' && t.message === 'Server exploded')).toBe(true);
+    });
+
+    it('shows the undone state right after the DELETE even when the reload fails', async () => {
+      await load({ ...HABIT, stats: { currentStreak: 5, bestStreak: 9, totalCheckIns: 22, checkedInToday: true } });
+      button('✓ Done · Undo').click();
+      await fixture.whenStable();
+      http.expectOne('/api/habits/h1/check-ins/today').flush(null, { status: 204, statusText: 'No Content' });
+      await fixture.whenStable();
+      list().flush({ error: { code: 'INTERNAL', message: 'Server exploded', details: [] } }, { status: 500, statusText: 'Error' });
+      await fixture.whenStable();
+
+      expect(button('Check in').disabled).toBe(false);
+      const stats = root().querySelector('.habit-stats')!.textContent!;
+      expect(stats).toMatch(/Current\s*🔥\s*4/);
+      expect(stats).toMatch(/Total\s*21/);
     });
 
     it('undoes today\'s check-in', async () => {
