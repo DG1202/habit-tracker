@@ -19,6 +19,7 @@ import { toApiError } from '../../core/api-error';
 import { HabitsApi } from '../../core/habits-api';
 import { localToday } from '../../core/local-date';
 import type { Habit } from '../../core/models';
+import { restoreFocusOnDestroy } from '../../shared/restore-focus';
 
 type FieldName = 'name' | 'description' | 'startDate';
 
@@ -66,6 +67,7 @@ export class HabitFormDialog implements OnInit {
 
   constructor() {
     afterNextRender(() => this.dialog().nativeElement.showModal?.());
+    restoreFocusOnDestroy();
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.serverError.set(null));
   }
 

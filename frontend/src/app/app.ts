@@ -13,7 +13,7 @@ import { TopBar } from './shared/top-bar';
     @if (auth.user()) {
       <ht-top-bar />
     }
-    <main class="page">
+    <main class="page" tabindex="-1">
       @if (auth.unreachable()) {
         <ht-error-banner message="Cannot reach the server. Check your connection and try again." (retry)="auth.retry()" />
       }

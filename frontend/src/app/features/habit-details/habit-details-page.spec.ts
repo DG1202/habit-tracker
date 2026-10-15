@@ -307,6 +307,41 @@ describe('HabitDetailsPage', () => {
       expect(root().querySelector('h1')!.textContent).toBe('Stretch for 15 minutes');
     });
 
+    it('returns focus to Edit after saving in the form dialog', async () => {
+      await flushLoad(HABIT);
+      const opener = button('Edit');
+      opener.focus();
+      opener.click();
+      await fixture.whenStable();
+      // jsdom has no showModal(), so open the dialog by hand to make its controls focusable.
+      root().querySelector('dialog')!.setAttribute('open', '');
+      root().querySelector<HTMLButtonElement>('dialog button[type="submit"]')!.focus();
+      expect(document.activeElement).not.toBe(opener);
+      root().querySelector('dialog form')!.dispatchEvent(new Event('submit'));
+      await fixture.whenStable();
+      http.expectOne((r) => r.url === '/api/habits/h1' && r.method === 'PATCH').flush(HABIT);
+      await fixture.whenStable();
+
+      expect(root().querySelector('dialog')).toBeNull();
+      expect(document.activeElement).toBe(button('Edit'));
+    });
+
+    it('returns focus to Delete when the confirmation is cancelled with Esc', async () => {
+      await flushLoad(ARCHIVED);
+      const opener = button('Delete');
+      opener.focus();
+      opener.click();
+      await fixture.whenStable();
+      root().querySelector('dialog')!.setAttribute('open', '');
+      button('Cancel').focus();
+      expect(document.activeElement).toBe(button('Cancel'));
+      root().querySelector('dialog')!.dispatchEvent(new Event('cancel', { cancelable: true }));
+      await fixture.whenStable();
+
+      expect(root().querySelector('dialog')).toBeNull();
+      expect(document.activeElement).toBe(opener);
+    });
+
     it('deletes an archived habit after in-app confirmation, then goes home with a toast', async () => {
       const confirmSpy = vi.spyOn(window, 'confirm');
       const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);

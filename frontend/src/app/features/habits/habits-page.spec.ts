@@ -320,6 +320,51 @@ describe('HabitsPage', () => {
       expect(root().querySelector('dialog')).toBeNull();
     });
 
+    describe('focus', () => {
+      // jsdom has no showModal(), so open the dialog by hand to make its controls focusable.
+      const focusAndClick = async (target: HTMLButtonElement) => {
+        target.focus();
+        target.click();
+        await fixture.whenStable();
+        root().querySelector('dialog')!.setAttribute('open', '');
+      };
+
+      it('returns focus to "+ New habit" when the form dialog is cancelled', async () => {
+        await load(HABIT);
+        const opener = button('+ New habit');
+        await focusAndClick(opener);
+        root().querySelector<HTMLInputElement>('dialog input[formcontrolname="name"]')!.focus();
+        expect(document.activeElement).not.toBe(opener);
+        root().querySelector<HTMLButtonElement>('dialog .dialog-footer .btn-ghost')!.click();
+        await fixture.whenStable();
+        expect(root().querySelector('dialog')).toBeNull();
+        expect(document.activeElement).toBe(opener);
+      });
+
+      it("returns focus to the row's Edit button when the form dialog is closed with Esc", async () => {
+        await load(HABIT);
+        const opener = button('Edit');
+        await focusAndClick(opener);
+        root().querySelector<HTMLInputElement>('dialog input[formcontrolname="name"]')!.focus();
+        root().querySelector('dialog')!.dispatchEvent(new Event('cancel', { cancelable: true }));
+        await fixture.whenStable();
+        expect(root().querySelector('dialog')).toBeNull();
+        expect(document.activeElement).toBe(opener);
+      });
+
+      it('returns focus to Delete when the confirmation is cancelled', async () => {
+        await load({ ...HABIT, status: 'ARCHIVED' });
+        const opener = button('Delete');
+        await focusAndClick(opener);
+        button('Cancel').focus();
+        expect(document.activeElement).toBe(button('Cancel'));
+        button('Cancel').click();
+        await fixture.whenStable();
+        expect(root().querySelector('dialog')).toBeNull();
+        expect(document.activeElement).toBe(opener);
+      });
+    });
+
     it('cancelling the delete confirmation sends no request', async () => {
       await load({ ...HABIT, status: 'ARCHIVED' });
       button('Delete').click();

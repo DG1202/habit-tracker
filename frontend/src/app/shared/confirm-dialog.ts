@@ -1,4 +1,5 @@
 import { afterNextRender, ChangeDetectionStrategy, Component, ElementRef, input, output, viewChild } from '@angular/core';
+import { restoreFocusOnDestroy } from './restore-focus';
 
 @Component({
   selector: 'ht-confirm-dialog',
@@ -28,6 +29,7 @@ export class ConfirmDialog {
 
   constructor() {
     afterNextRender(() => this.dialog().nativeElement.showModal?.());
+    restoreFocusOnDestroy();
   }
 
   protected onClick(event: MouseEvent): void {

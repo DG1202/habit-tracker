@@ -65,4 +65,18 @@ describe('App', () => {
     root.querySelector<HTMLButtonElement>('ht-error-banner button')!.click();
     expect(retry).toHaveBeenCalledTimes(1);
   });
+
+  it('moves focus to the main region when Retry removes the banner', async () => {
+    const root = fixture.nativeElement as HTMLElement;
+    retry.mockImplementation(() => unreachable.set(false));
+    unreachable.set(true);
+    await fixture.whenStable();
+    const retryButton = root.querySelector<HTMLButtonElement>('ht-error-banner button')!;
+    retryButton.focus();
+    retryButton.click();
+    await fixture.whenStable();
+
+    expect(root.querySelector('ht-error-banner')).toBeNull();
+    expect(document.activeElement).toBe(root.querySelector('main'));
+  });
 });
