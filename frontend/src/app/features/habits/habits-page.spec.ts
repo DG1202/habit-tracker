@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import type { Habit } from '../../core/models';
+import { ToastService } from '../../core/toast-service';
 import { HabitsPage } from './habits-page';
 
 const HABIT: Habit = {
@@ -97,5 +98,98 @@ describe('HabitsPage', () => {
     http.expectOne((r) => r.url === '/api/habits').flush([]);
     await fixture.whenStable();
     expect(text()).toContain('No habits yet');
+  });
+
+  describe('actions', () => {
+    const root = () => fixture.nativeElement as HTMLElement;
+    const button = (label: string) =>
+      Array.from(root().querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent!.trim() === label)!;
+    const list = () => http.expectOne((r) => r.url === '/api/habits' && r.method === 'GET');
+
+    async function load(habit: Habit) {
+      await settle();
+      list().flush([habit]);
+      await fixture.whenStable();
+    }
+
+    it('checks in, disables the button while pending, then reloads the list', async () => {
+      await load(HABIT);
+      button('Check in').click();
+      await fixture.whenStable();
+      const req = http.expectOne('/api/habits/h1/check-ins');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({});
+      expect(button('Check in').disabled).toBe(true);
+
+      req.flush({ ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } });
+      await fixture.whenStable();
+      list().flush([{ ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } }]);
+      await fixture.whenStable();
+      expect(text()).toContain('Undo');
+    });
+
+    it('undoes today\'s check-in', async () => {
+      await load({ ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } });
+      button('✓ Done · Undo').click();
+      await fixture.whenStable();
+      const req = http.expectOne('/api/habits/h1/check-ins/today');
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+      await fixture.whenStable();
+      list().flush([HABIT]);
+    });
+
+    it('pauses a habit', async () => {
+      await load(HABIT);
+      button('Pause').click();
+      await fixture.whenStable();
+      const req = http.expectOne('/api/habits/h1');
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ status: 'PAUSED' });
+      req.flush({ ...HABIT, status: 'PAUSED' });
+      await fixture.whenStable();
+      list().flush([{ ...HABIT, status: 'PAUSED' }]);
+    });
+
+    it('cancelling the delete confirmation sends no request', async () => {
+      await load({ ...HABIT, status: 'ARCHIVED' });
+      button('Delete').click();
+      await fixture.whenStable();
+      expect(text()).toContain('cannot be undone');
+
+      button('Cancel').click();
+      await fixture.whenStable();
+      expect(root().querySelector('dialog')).toBeNull();
+      http.expectNone('/api/habits/h1');
+    });
+
+    it('confirming delete removes the habit, shows a success toast and reloads', async () => {
+      await load({ ...HABIT, status: 'ARCHIVED' });
+      button('Delete').click();
+      await fixture.whenStable();
+      root().querySelector<HTMLButtonElement>('dialog .btn-primary')!.click();
+      await fixture.whenStable();
+      const req = http.expectOne('/api/habits/h1');
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+      await fixture.whenStable();
+
+      expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'success' && t.message.includes('was deleted'))).toBe(true);
+      list().flush([]);
+      await fixture.whenStable();
+      expect(root().querySelector('dialog')).toBeNull();
+      expect(text()).toContain('No habits yet');
+    });
+
+    it('shows an error toast when an action fails', async () => {
+      await load(HABIT);
+      button('Check in').click();
+      await fixture.whenStable();
+      http
+        .expectOne('/api/habits/h1/check-ins')
+        .flush({ error: { code: 'CHECKIN_EXISTS', message: 'Already checked in today', details: [] } }, { status: 409, statusText: 'Conflict' });
+      await fixture.whenStable();
+      expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'error' && t.message === 'Already checked in today')).toBe(true);
+    });
   });
 });

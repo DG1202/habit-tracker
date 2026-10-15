@@ -28,7 +28,7 @@ export const STATUS_LABELS: Record<HabitStatus, string> = { ACTIVE: 'Active', PA
       <div class="habit-today">
         @if (habit().status === 'ACTIVE') {
           @if (habit().stats.checkedInToday) {
-            <button type="button" class="btn btn-success-soft" [disabled]="busy()" [attr.aria-label]="'Undo today\\'s check-in for ' + habit().name" (click)="undo.emit()">
+            <button type="button" class="btn btn-success-soft" [disabled]="busy()" [attr.aria-label]="'Done today. Undo check-in for ' + habit().name" (click)="undo.emit()">
               ✓ Done · Undo
             </button>
           } @else {
@@ -44,17 +44,17 @@ export const STATUS_LABELS: Record<HabitStatus, string> = { ACTIVE: 'Active', PA
       <div class="habit-actions">
         @switch (habit().status) {
           @case ('ACTIVE') {
-            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" (click)="edit.emit()">Edit</button>
-            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" (click)="statusChange.emit('PAUSED')">Pause</button>
-            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" (click)="statusChange.emit('ARCHIVED')">Archive</button>
+            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" [attr.aria-label]="'Edit ' + habit().name" (click)="edit.emit()">Edit</button>
+            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" [attr.aria-label]="'Pause ' + habit().name" (click)="statusChange.emit('PAUSED')">Pause</button>
+            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" [attr.aria-label]="'Archive ' + habit().name" (click)="statusChange.emit('ARCHIVED')">Archive</button>
           }
           @case ('PAUSED') {
-            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" (click)="edit.emit()">Edit</button>
-            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" (click)="statusChange.emit('ACTIVE')">Resume</button>
-            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" (click)="statusChange.emit('ARCHIVED')">Archive</button>
+            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" [attr.aria-label]="'Edit ' + habit().name" (click)="edit.emit()">Edit</button>
+            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" [attr.aria-label]="'Resume ' + habit().name" (click)="statusChange.emit('ACTIVE')">Resume</button>
+            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" [attr.aria-label]="'Archive ' + habit().name" (click)="statusChange.emit('ARCHIVED')">Archive</button>
           }
           @case ('ARCHIVED') {
-            <button type="button" class="btn btn-danger btn-sm" [disabled]="busy()" (click)="delete.emit()">Delete</button>
+            <button type="button" class="btn btn-danger btn-sm" [disabled]="busy()" [attr.aria-label]="'Delete ' + habit().name" (click)="delete.emit()">Delete</button>
           }
         }
       </div>
