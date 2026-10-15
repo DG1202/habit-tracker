@@ -15,7 +15,10 @@ import { restoreFocusOnDestroy } from './restore-focus';
       </div>
     </dialog>
   `,
-  styles: `.danger { background: var(--color-danger); border-color: var(--color-danger); }`,
+  styles: `
+    .danger { background: var(--color-danger); border-color: var(--color-danger); }
+    .danger:hover:not(:disabled) { background: var(--color-danger-hover); border-color: var(--color-danger-hover); }
+  `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ConfirmDialog {
