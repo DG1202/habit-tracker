@@ -15,7 +15,7 @@
 }
 .btn-success-soft {
   color: var(--color-success); background: var(--color-success-soft); border-color: transparent;
-  &:hover:not(:disabled) { background: var(--color-success-soft-hover); border-color: transparent; }
+  &:hover:not(:disabled) { color: var(--color-success-strong); background: var(--color-success-soft-hover); border-color: transparent; }
 }
 .btn-ghost {
   background: transparent; border-color: transparent; color: var(--color-muted);
