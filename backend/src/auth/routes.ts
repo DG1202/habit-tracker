@@ -45,7 +45,7 @@ export async function authRoutes(app: FastifyInstance, { config, prisma, session
       reply.setCookie(SESSION_COOKIE, await sessions.create(user.id), sessionCookieOptions(config));
       return reply.redirect(`${config.APP_ORIGIN}/`);
     } catch (err) {
-      request.log.warn({ provider, reason: err instanceof Error ? err.message : 'unknown' }, 'SSO callback failed');
+      request.log.warn({ provider, reason: err instanceof Error ? err.name : 'unknown' }, 'SSO callback failed');
       return reply.redirect(`${config.APP_ORIGIN}/login?error=sso_failed`);
     }
   });

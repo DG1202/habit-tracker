@@ -29,12 +29,20 @@ export interface AppDeps {
   logger?: FastifyServerOptions['logger'];
 }
 
-function loggerOptions(config: Config): FastifyServerOptions['logger'] {
-  if (config.NODE_ENV === 'test') return false;
+export function loggerOptions(config: Config, stream?: { write(message: string): void }): FastifyServerOptions['logger'] {
+  if (config.NODE_ENV === 'test' && !stream) return false;
   return {
     level: 'info',
+    ...(stream ? { stream } : {}),
     serializers: {
       req: (request: { method: string; url: string }) => ({ method: request.method, url: request.url.split('?')[0] }),
+      // Fastify's typing demands message and stack in the result; omitting them is the point.
+      err: ((error: Error & { code?: unknown; statusCode?: unknown }) => ({
+        type: error.name,
+        ...(typeof error.code === 'string' ? { code: error.code } : {}),
+        ...(typeof error.statusCode === 'number' ? { statusCode: error.statusCode } : {}),
+        ...(error instanceof AppError ? { message: error.message } : {}),
+      })) as never,
     },
   };
 }
