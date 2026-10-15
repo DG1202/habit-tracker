@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.ts';
-import { createTestContext, ORIGIN, TEST_CONFIG, type TestContext } from './helpers.ts';
+import { createTestContext, ORIGIN, signIn, TEST_CONFIG, type TestContext } from './helpers.ts';
 
 describe('security hardening', () => {
   let ctx: TestContext;
@@ -54,10 +54,11 @@ describe('security hardening', () => {
   });
 
   it('rejects oversized bodies', async () => {
+    const cookie = await signIn(ctx);
     const res = await ctx.app.inject({
       method: 'POST',
       url: '/api/habits',
-      headers: { origin: 'http://localhost:4300', 'content-type': 'application/json' },
+      headers: { origin: 'http://localhost:4300', 'content-type': 'application/json', cookie },
       payload: JSON.stringify({ name: 'x'.repeat(20_000) }),
     });
     expect(res.statusCode).toBe(413);

@@ -56,10 +56,11 @@ export function createHabitService(prisma: PrismaClient, clock: Clock) {
     async list(user: User, query: ListHabitsInput): Promise<HabitDto[]> {
       const habits = await prisma.habit.findMany({ where: { userId: user.id }, include: withDates, orderBy: { createdAt: 'desc' } });
       const needle = query.q?.toLocaleLowerCase();
+      const day = today(user);
       return habits
-        .map((habit) => toDto(habit, today(user)))
+        .map((habit) => toDto(habit, day))
         .filter((habit) => !query.status || habit.status === query.status)
-        .filter((habit) => !needle || `${habit.name}\n${habit.description}`.toLocaleLowerCase().includes(needle))
+        .filter((habit) => !needle || [habit.name, habit.description].some((text) => text.toLocaleLowerCase().includes(needle)))
         .filter((habit) => !query.today || (habit.status === 'ACTIVE' && habit.stats.checkedInToday === (query.today === 'done')));
     },
 
@@ -69,22 +70,30 @@ export function createHabitService(prisma: PrismaClient, clock: Clock) {
     },
 
     async update(user: User, id: string, input: UpdateHabitInput): Promise<HabitDto> {
-      const habit = await findOwned(user.id, id);
-      if (habit.status === 'ARCHIVED') throw new AppError(409, 'HABIT_ARCHIVED', 'Archived habits are read-only');
-      if (input.startDate && input.startDate > habit.startDate) {
+      // Every rule is part of the UPDATE itself, so a concurrent archive, delete or check-in cannot slip past it.
+      const { count } = await prisma.habit.updateMany({
+        where: {
+          id,
+          userId: user.id,
+          status: { not: 'ARCHIVED' },
+          ...(input.startDate ? { checkIns: { none: { date: { lt: input.startDate } } } } : {}),
+        },
+        data: input,
+      });
+      if (count === 0) {
+        const habit = await findOwned(user.id, id);
+        if (habit.status === 'ARCHIVED') throw new AppError(409, 'HABIT_ARCHIVED', 'Archived habits are read-only');
         const first = await prisma.checkIn.findFirst({ where: { habitId: id }, orderBy: { date: 'asc' } });
-        if (first && first.date < input.startDate) {
-          throw new AppError(422, 'START_DATE_AFTER_CHECKINS', `Start date cannot be after the first check-in (${first.date})`);
-        }
+        throw new AppError(422, 'START_DATE_AFTER_CHECKINS', `Start date cannot be after the first check-in${first ? ` (${first.date})` : ''}`);
       }
-      await prisma.habit.update({ where: { id }, data: input });
       return get(user, id);
     },
 
     async remove(user: User, id: string): Promise<void> {
       const habit = await findOwned(user.id, id);
       if (habit.status !== 'ARCHIVED') throw new AppError(409, 'HABIT_NOT_ARCHIVED', 'Archive the habit before deleting it');
-      await prisma.habit.delete({ where: { id } });
+      const { count } = await prisma.habit.deleteMany({ where: { id, userId: user.id } });
+      if (count === 0) throw notFound('Habit not found');
     },
   };
 }

@@ -68,6 +68,21 @@ describe('habits API', () => {
     expect(res.statusCode).toBe(401);
   });
 
+  it('answers 401 before looking at the body of an unauthenticated request', async () => {
+    for (const [contentType, payload] of [
+      ['application/json', '{"name":'],
+      ['text/plain', 'name=Run'],
+    ]) {
+      const res = await ctx.app.inject({
+        method: 'POST',
+        url: '/api/habits',
+        headers: { origin: 'http://localhost:4300', 'content-type': contentType! },
+        payload,
+      });
+      expect(res.statusCode).toBe(401);
+    }
+  });
+
   it('isolates habits per user', async () => {
     const habit = (await create(alice, { name: 'Alice habit', startDate: '2026-10-01' })).json();
 
@@ -106,6 +121,34 @@ describe('habits API', () => {
       expect(res.statusCode).toBe(409);
       expect(res.json().error.code).toBe('HABIT_ARCHIVED');
     }
+  });
+
+  it('moves the start date earlier, and through Paused to Archived', async () => {
+    const userId = await userIdOf(ctx, alice);
+    const habit = await createHabitWithStreak(ctx, userId, { days: 3, endingOn: '2026-10-15' });
+    const earlier = await request(ctx, alice, { method: 'PATCH', url: `/api/habits/${habit.id}`, payload: { startDate: '2026-01-01' } });
+    expect(earlier.json()).toMatchObject({ startDate: '2026-01-01', stats: { currentStreak: 3 } });
+
+    await request(ctx, alice, { method: 'PATCH', url: `/api/habits/${habit.id}`, payload: { status: 'PAUSED' } });
+    const archived = await request(ctx, alice, { method: 'PATCH', url: `/api/habits/${habit.id}`, payload: { status: 'ARCHIVED' } });
+    expect(archived.json().status).toBe('ARCHIVED');
+  });
+
+  it("does not let another user delete someone else's archived habit", async () => {
+    const userId = await userIdOf(ctx, alice);
+    const habit = await createHabitWithStreak(ctx, userId, { days: 3, endingOn: '2026-10-15', status: 'ARCHIVED' });
+    const res = await request(ctx, bob, { method: 'DELETE', url: `/api/habits/${habit.id}` });
+    expect(res.statusCode).toBe(404);
+    expect(await ctx.prisma.checkIn.count({ where: { habitId: habit.id } })).toBe(3);
+  });
+
+  it("filters by today in the user's time zone", async () => {
+    ctx.clock.set('2026-10-15T22:30:00.000Z');
+    const userId = await userIdOf(ctx, alice);
+    await createHabitWithStreak(ctx, userId, { days: 1, endingOn: '2026-10-16', name: 'Kyiv today' });
+    await request(ctx, alice, { method: 'PUT', url: '/api/me/timezone', payload: { timezone: 'Europe/Kyiv' } });
+    const done = await request(ctx, alice, { method: 'GET', url: '/api/habits?today=done' });
+    expect(done.json().map((h: { name: string }) => h.name)).toEqual(['Kyiv today']);
   });
 
   it('refuses to move the start date after the first check-in', async () => {
@@ -149,6 +192,7 @@ describe('habits API', () => {
     expect(await names('?today=done')).toEqual(['Morning Run']);
     expect(await names('?today=not_done')).toEqual([notDone.name]);
     expect(await names('?q=zzz')).toEqual([]);
+    expect(await names('?q=meditate%0Aten')).toEqual([]);
 
     const bad = await request(ctx, alice, { method: 'GET', url: '/api/habits?status=DONE' });
     expect(bad.statusCode).toBe(400);

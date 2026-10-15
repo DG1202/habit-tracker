@@ -95,7 +95,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   );
   await app.register(
     async (scope) => {
-      scope.addHook('preHandler', async (request) => {
+      scope.addHook('onRequest', async (request) => {
         currentUser(request);
       });
       await scope.register(habitRoutes, { habits });
