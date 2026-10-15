@@ -160,6 +160,21 @@ describe('HabitFormDialog', () => {
     }
   });
 
+  it('moves focus to the first invalid field in DOM order when several are invalid', async () => {
+    await render();
+    document.body.appendChild(fixture.nativeElement);
+    el().querySelector('dialog')!.setAttribute('open', '');
+    try {
+      type('textarea[formcontrolname="description"]', 'y'.repeat(501));
+      el().querySelector<HTMLButtonElement>('button[type="submit"]')!.focus();
+      await submit();
+      expect(el().querySelectorAll('[aria-invalid="true"]')).toHaveLength(2);
+      expect(document.activeElement).toBe(el().querySelector('input[formcontrolname="name"]'));
+    } finally {
+      fixture.nativeElement.remove();
+    }
+  });
+
   it('cannot be closed while saving', async () => {
     await render();
     const pending = new Subject<Habit>();
