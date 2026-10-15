@@ -26,6 +26,32 @@ function beforeWrites(prisma: PrismaClient, model: 'habit' | 'checkIn', methods:
   });
 }
 
+// Runs `after` once, right after the first habit read resolves: a concurrent request landing between the check and the write.
+function afterFirstHabitRead(prisma: PrismaClient, after: () => Promise<unknown>) {
+  let done = false;
+  return new Proxy(prisma, {
+    get(target, prop) {
+      const value = Reflect.get(target, prop);
+      if (prop !== 'habit') return typeof value === 'function' ? value.bind(target) : value;
+      return new Proxy(value, {
+        get(delegate, name) {
+          const method = Reflect.get(delegate, name);
+          if (typeof method !== 'function') return method;
+          if (name !== 'findFirst') return method.bind(delegate);
+          return async (...args: unknown[]) => {
+            const result = await method.apply(delegate, args);
+            if (!done) {
+              done = true;
+              await after();
+            }
+            return result;
+          };
+        },
+      });
+    },
+  });
+}
+
 describe('concurrent changes between the ownership check and the write', () => {
   let ctx: TestContext;
   let user: User;
@@ -67,11 +93,35 @@ describe('concurrent changes between the ownership check and the write', () => {
     expect((await ctx.prisma.habit.findUniqueOrThrow({ where: { id: habit.id } })).startDate).toBe('2026-10-01');
   });
 
+  const checkInAfterRead = (habitId: string, after: () => Promise<unknown>) => {
+    const prisma = afterFirstHabitRead(ctx.prisma, after);
+    return createCheckInService(prisma, ctx.clock, createHabitService(prisma, ctx.clock), async () => {}).checkIn(user, habitId, {});
+  };
+
   it('answers 404 when the habit is deleted while checking in', async () => {
     const habit = await createHabitWithStreak(ctx, user.id, { days: 0, endingOn: '2026-10-15' });
-    const prisma = beforeWrites(ctx.prisma, 'checkIn', ['create'], deleteHabit(habit.id));
-    const checkIns = createCheckInService(prisma, ctx.clock, createHabitService(prisma, ctx.clock), async () => {});
-    await expect(checkIns.checkIn(user, habit.id, {})).rejects.toMatchObject({ statusCode: 404, code: 'NOT_FOUND' });
+    await expect(checkInAfterRead(habit.id, deleteHabit(habit.id))).rejects.toMatchObject({ statusCode: 404, code: 'NOT_FOUND' });
+  });
+
+  it.each(['ARCHIVED', 'PAUSED'] as const)('stores no check-in when the habit becomes %s while checking in', async (status) => {
+    const habit = await createHabitWithStreak(ctx, user.id, { days: 0, endingOn: '2026-10-15' });
+    const change = () => ctx.prisma.habit.update({ where: { id: habit.id }, data: { status } });
+    await expect(checkInAfterRead(habit.id, change)).rejects.toMatchObject({ statusCode: 409, code: 'HABIT_NOT_ACTIVE' });
+    expect(await ctx.prisma.checkIn.count({ where: { habitId: habit.id } })).toBe(0);
+  });
+
+  it('stores no check-in when the start date moves past today while checking in', async () => {
+    const habit = await createHabitWithStreak(ctx, user.id, { days: 0, endingOn: '2026-10-15' });
+    const change = () => ctx.prisma.habit.update({ where: { id: habit.id }, data: { startDate: '2026-10-16' } });
+    await expect(checkInAfterRead(habit.id, change)).rejects.toMatchObject({ statusCode: 422, code: 'BEFORE_START_DATE' });
+    expect(await ctx.prisma.checkIn.count({ where: { habitId: habit.id } })).toBe(0);
+  });
+
+  it('answers 409 CHECKIN_EXISTS when another request checks in first', async () => {
+    const habit = await createHabitWithStreak(ctx, user.id, { days: 0, endingOn: '2026-10-15' });
+    const change = () => ctx.prisma.checkIn.create({ data: { habitId: habit.id, date: '2026-10-15' } });
+    await expect(checkInAfterRead(habit.id, change)).rejects.toMatchObject({ statusCode: 409, code: 'CHECKIN_EXISTS' });
+    expect(await ctx.prisma.checkIn.count({ where: { habitId: habit.id } })).toBe(1);
   });
 });
 

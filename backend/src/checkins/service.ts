@@ -1,11 +1,16 @@
-import { isForeignKeyViolation, isUniqueViolation, type PrismaClient } from '../db.ts';
-import type { User } from '../generated/prisma/client.ts';
+import { randomUUID } from 'node:crypto';
+import type { PrismaClient } from '../db.ts';
+import type { Habit, User } from '../generated/prisma/client.ts';
 import type { HabitDto, HabitService } from '../habits/service.ts';
 import type { Clock } from '../lib/clock.ts';
 import { todayIn } from '../lib/dates.ts';
 import { AppError, notFound } from '../lib/errors.ts';
 
 const notActive = () => new AppError(409, 'HABIT_NOT_ACTIVE', 'Only active habits can be checked in');
+
+function assertStarted(habit: Habit, today: string): void {
+  if (today < habit.startDate) throw new AppError(422, 'BEFORE_START_DATE', `This habit starts on ${habit.startDate}`);
+}
 
 export function createCheckInService(
   prisma: PrismaClient,
@@ -20,13 +25,18 @@ export function createCheckInService(
       const today = todayIn(user.timezone, clock.now());
       if (body.date && body.date > today) throw new AppError(422, 'DATE_IN_FUTURE', 'Check-ins for future dates are not allowed');
       if (body.date && body.date < today) throw new AppError(422, 'BACKFILL_NOT_SUPPORTED', 'Only today can be checked in');
-      if (today < habit.startDate) throw new AppError(422, 'BEFORE_START_DATE', `This habit starts on ${habit.startDate}`);
-      try {
-        await prisma.checkIn.create({ data: { habitId, date: today } });
-      } catch (error) {
-        if (isUniqueViolation(error)) throw new AppError(409, 'CHECKIN_EXISTS', 'Already checked in today');
-        if (isForeignKeyViolation(error)) throw notFound('Habit not found');
-        throw error;
+      assertStarted(habit, today);
+      // One statement re-checks ownership, status and start date, so a concurrent edit cannot slip in before the insert.
+      const inserted = await prisma.$executeRaw`
+        INSERT INTO "CheckIn" ("id", "habitId", "date", "createdAt")
+        SELECT ${randomUUID()}, "id", ${today}, ${new Date()} FROM "Habit"
+        WHERE "id" = ${habitId} AND "userId" = ${user.id} AND "status" = 'ACTIVE' AND "startDate" <= ${today}
+        ON CONFLICT ("habitId", "date") DO NOTHING`;
+      if (inserted === 0) {
+        const current = await habits.findOwned(user.id, habitId);
+        if (current.status !== 'ACTIVE') throw notActive();
+        assertStarted(current, today);
+        throw new AppError(409, 'CHECKIN_EXISTS', 'Already checked in today');
       }
       await onCheckIn(user.id);
       return habits.get(user, habitId);
