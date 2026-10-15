@@ -215,12 +215,16 @@ The API has no backfill. To demo milestones locally:
 cd backend && yarn seed:demo --user-id <your user id>
 ```
 
-Run it without `--user-id` (or with an unknown id) to print the known users and their ids.
+Run it without `--user-id` (or with an unknown id) to print the known users' ids, providers and creation times.
 
 Creates four habits for that user: three with 2, 6 and 29 check-ins ending yesterday, so checking in today
 reaches the 3-, 7- and 30-day milestones live; and one with 7 check-ins ending yesterday, already at a 7-day
 streak, so its 3- and 7-day milestones arrive as soon as the app connects. Refuses to run with
 `NODE_ENV=production`.
+
+The seed is deliberately **not idempotent**: every run adds another four habits with the same names and no
+milestone history, so you can replay the milestone demo without resetting the database. Archive and delete the
+old demo habits in the app if the list gets crowded.
 
 ## Containerization
 

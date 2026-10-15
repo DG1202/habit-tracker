@@ -14,7 +14,7 @@ const userId = values['user-id'];
 const prisma = createPrisma(config.DATABASE_URL);
 const user = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
 if (!user) {
-  const users = await prisma.user.findMany({ select: { id: true, provider: true, displayName: true } });
+  const users = await prisma.user.findMany({ select: { id: true, provider: true, createdAt: true } });
   console.error('Usage: yarn seed:demo --user-id <id>. Known users:');
   console.table(users);
   process.exit(1);

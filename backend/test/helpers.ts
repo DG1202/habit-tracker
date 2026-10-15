@@ -27,7 +27,7 @@ export const TEST_CONFIG: Config = {
 
 const MIGRATIONS_DIR = join(import.meta.dirname, '..', 'prisma', 'migrations');
 
-function applyMigrations(file: string): void {
+export function applyMigrations(file: string): void {
   const db = new DatabaseSync(file);
   const dirs = readdirSync(MIGRATIONS_DIR, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
