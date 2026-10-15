@@ -10,6 +10,14 @@
       <div class="title">
         <h1>{{ habit.name }}</h1>
         <span class="badge" [attr.data-status]="habit.status">{{ statusLabels[habit.status] }}</span>
+        <ht-habit-actions
+          class="actions"
+          [habit]="habit"
+          [busy]="busy()"
+          (edit)="editing.set(true)"
+          (statusChange)="setStatus($event)"
+          (delete)="confirmingDelete.set(true)"
+        />
       </div>
       @if (habit.description) {
         <p>{{ habit.description }}</p>
@@ -62,4 +70,19 @@
       </section>
     }
   </div>
+}
+
+@if (editing()) {
+  <ht-habit-form-dialog [habit]="habit()" (saved)="onSaved($event)" (closed)="editing.set(false)" />
+}
+
+@if (confirmingDelete() && habit(); as habit) {
+  <ht-confirm-dialog
+    title="Delete habit?"
+    [message]="'Delete “' + habit.name + '” and its entire check-in history? This cannot be undone.'"
+    confirmLabel="Delete"
+    [danger]="true"
+    (confirmed)="remove(habit)"
+    (cancelled)="confirmingDelete.set(false)"
+  />
 }

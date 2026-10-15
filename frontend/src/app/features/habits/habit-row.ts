@@ -2,12 +2,13 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import { RouterLink } from '@angular/router';
 import { localToday } from '../../core/local-date';
 import type { Habit, HabitStatus } from '../../core/models';
+import { HabitActions } from './habit-actions';
 
 export const STATUS_LABELS: Record<HabitStatus, string> = { ACTIVE: 'Active', PAUSED: 'Paused', ARCHIVED: 'Archived' };
 
 @Component({
   selector: 'ht-habit-row',
-  imports: [RouterLink],
+  imports: [RouterLink, HabitActions],
   template: `
     <article class="habit-row card" [class.is-done]="habit().stats.checkedInToday">
       <div class="habit-main">
@@ -44,23 +45,14 @@ export const STATUS_LABELS: Record<HabitStatus, string> = { ACTIVE: 'Active', PA
         }
       </div>
 
-      <div class="habit-actions">
-        @switch (habit().status) {
-          @case ('ACTIVE') {
-            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" [attr.aria-label]="'Edit ' + habit().name" (click)="edit.emit()">Edit</button>
-            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" [attr.aria-label]="'Pause ' + habit().name" (click)="statusChange.emit('PAUSED')">Pause</button>
-            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" [attr.aria-label]="'Archive ' + habit().name" (click)="statusChange.emit('ARCHIVED')">Archive</button>
-          }
-          @case ('PAUSED') {
-            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" [attr.aria-label]="'Edit ' + habit().name" (click)="edit.emit()">Edit</button>
-            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" [attr.aria-label]="'Resume ' + habit().name" (click)="statusChange.emit('ACTIVE')">Resume</button>
-            <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" [attr.aria-label]="'Archive ' + habit().name" (click)="statusChange.emit('ARCHIVED')">Archive</button>
-          }
-          @case ('ARCHIVED') {
-            <button type="button" class="btn btn-danger btn-sm" [disabled]="busy()" [attr.aria-label]="'Delete ' + habit().name" (click)="delete.emit()">Delete</button>
-          }
-        }
-      </div>
+      <ht-habit-actions
+        class="habit-actions"
+        [habit]="habit()"
+        [busy]="busy()"
+        (edit)="edit.emit()"
+        (statusChange)="statusChange.emit($event)"
+        (delete)="delete.emit()"
+      />
     </article>
   `,
   styles: `
@@ -77,7 +69,7 @@ export const STATUS_LABELS: Record<HabitStatus, string> = { ACTIVE: 'Active', PA
     .habit-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: 0; text-align: center; }
     .habit-stats dt { font-size: var(--text-xs); color: var(--color-muted); }
     .habit-stats dd { margin: 0; font-weight: 700; font-size: var(--text-lg); }
-    .habit-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-1); }
+    .habit-actions { justify-content: flex-end; }
     .small { font-size: var(--text-sm); }
     @media (max-width: 860px) {
       .habit-row { grid-template-columns: 1fr; gap: var(--space-3); }

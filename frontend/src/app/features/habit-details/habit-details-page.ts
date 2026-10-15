@@ -1,22 +1,25 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, type OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { forkJoin, type Observable } from 'rxjs';
 import { finalize, map } from 'rxjs/operators';
 import { toApiError } from '../../core/api-error';
 import { withoutTodayCheckIn } from '../../core/habit-updates';
 import { HabitsApi } from '../../core/habits-api';
 import { localToday } from '../../core/local-date';
-import type { Habit, MonthCheckIns } from '../../core/models';
+import type { Habit, HabitStatus, MonthCheckIns } from '../../core/models';
 import { ToastService } from '../../core/toast-service';
+import { ConfirmDialog } from '../../shared/confirm-dialog';
 import { EmptyState } from '../../shared/empty-state';
 import { ErrorBanner } from '../../shared/error-banner';
+import { HabitActions } from '../habits/habit-actions';
+import { HabitFormDialog } from '../habits/habit-form-dialog';
 import { STATUS_LABELS } from '../habits/habit-row';
 import { buildMonthGrid } from './month-grid';
 
 @Component({
   selector: 'ht-habit-details-page',
-  imports: [RouterLink, EmptyState, ErrorBanner],
+  imports: [RouterLink, EmptyState, ErrorBanner, HabitActions, HabitFormDialog, ConfirmDialog],
   templateUrl: './habit-details-page.html',
   styles: `
     .back { display: inline-block; margin-bottom: var(--space-4); font-size: var(--text-sm); }
@@ -24,6 +27,7 @@ import { buildMonthGrid } from './month-grid';
     .details { display: flex; flex-direction: column; gap: var(--space-5); }
     .header { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
     .title { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+    .actions { margin-left: auto; }
     .meta { font-size: var(--text-sm); }
     .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
     .stat { padding: var(--space-4); text-align: center; }
@@ -45,6 +49,7 @@ export class HabitDetailsPage implements OnInit {
 
   private readonly api = inject(HabitsApi);
   private readonly toasts = inject(ToastService);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly habit = signal<Habit | null>(null);
@@ -52,6 +57,8 @@ export class HabitDetailsPage implements OnInit {
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
   protected readonly busy = signal(false);
+  protected readonly editing = signal(false);
+  protected readonly confirmingDelete = signal(false);
   protected readonly statusLabels = STATUS_LABELS;
   protected readonly weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   protected readonly today = computed(() => this.month()?.today ?? localToday());
@@ -103,6 +110,33 @@ export class HabitDetailsPage implements OnInit {
   protected undo(): void {
     const habit = this.habit();
     if (habit) this.mutate(this.api.undoCheckIn(habit.id).pipe(map(() => withoutTodayCheckIn(habit))));
+  }
+
+  protected setStatus(status: HabitStatus): void {
+    this.mutate(this.api.update(this.id(), { status }));
+  }
+
+  protected onSaved(habit: Habit): void {
+    this.editing.set(false);
+    this.apply(habit);
+  }
+
+  protected remove(habit: Habit): void {
+    this.confirmingDelete.set(false);
+    this.busy.set(true);
+    this.api
+      .remove(habit.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        complete: () => {
+          this.toasts.success(`"${habit.name}" was deleted`);
+          void this.router.navigate(['/']);
+        },
+        error: (err: unknown) => {
+          this.busy.set(false);
+          this.toasts.error(toApiError(err).message);
+        },
+      });
   }
 
   private mutate(request: Observable<Habit>): void {

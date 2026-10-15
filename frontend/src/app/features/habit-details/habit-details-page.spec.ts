@@ -1,7 +1,8 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
+import { vi } from 'vitest';
 import type { Habit, MonthCheckIns } from '../../core/models';
 import { ToastService } from '../../core/toast-service';
 import { HabitDetailsPage } from './habit-details-page';
@@ -116,5 +117,114 @@ describe('HabitDetailsPage', () => {
     await flushLoad({ ...HABIT, startDate: '2999-01-01' });
     expect(button('Starts on 2999-01-01').disabled).toBe(true);
     expect(button('Check in for today')).toBeUndefined();
+  });
+
+  describe('status actions', () => {
+    const labels = () => Array.from(root().querySelectorAll('ht-habit-actions button')).map((b) => b.textContent!.trim());
+    const PAUSED: Habit = { ...HABIT, status: 'PAUSED' };
+    const ARCHIVED: Habit = { ...HABIT, status: 'ARCHIVED' };
+
+    it('follows the list\'s status rules', async () => {
+      await flushLoad(HABIT);
+      expect(labels()).toEqual(['Edit', 'Pause', 'Archive']);
+    });
+
+    it('offers Resume for a paused habit', async () => {
+      await flushLoad(PAUSED);
+      expect(labels()).toEqual(['Edit', 'Resume', 'Archive']);
+    });
+
+    it('makes an archived habit read-only except for Delete', async () => {
+      await flushLoad(ARCHIVED);
+      expect(labels()).toEqual(['Delete']);
+      expect(button('Check in for today')).toBeUndefined();
+    });
+
+    it('pauses the habit and shows the result immediately', async () => {
+      await flushLoad(HABIT);
+      button('Pause').click();
+      await fixture.whenStable();
+      const req = http.expectOne((r) => r.url === '/api/habits/h1' && r.method === 'PATCH');
+      expect(req.request.body).toEqual({ status: 'PAUSED' });
+      req.flush(PAUSED);
+      await fixture.whenStable();
+      expect(labels()).toEqual(['Edit', 'Resume', 'Archive']);
+      expect(root().querySelector('.badge')!.textContent).toContain('Paused');
+      await flushLoad(PAUSED);
+    });
+
+    it('archives the habit', async () => {
+      await flushLoad(HABIT);
+      button('Archive').click();
+      await fixture.whenStable();
+      const req = http.expectOne((r) => r.url === '/api/habits/h1' && r.method === 'PATCH');
+      expect(req.request.body).toEqual({ status: 'ARCHIVED' });
+      req.flush(ARCHIVED);
+      await fixture.whenStable();
+      expect(labels()).toEqual(['Delete']);
+      await flushLoad(ARCHIVED);
+    });
+
+    it('edits the habit in the shared form dialog', async () => {
+      await flushLoad(HABIT);
+      button('Edit').click();
+      await fixture.whenStable();
+      const name = root().querySelector<HTMLInputElement>('dialog input[formcontrolname="name"]')!;
+      expect(name.value).toBe('Stretch for 10 minutes');
+
+      name.value = 'Stretch for 15 minutes';
+      name.dispatchEvent(new Event('input'));
+      root().querySelector('dialog form')!.dispatchEvent(new Event('submit'));
+      await fixture.whenStable();
+      const req = http.expectOne((r) => r.url === '/api/habits/h1' && r.method === 'PATCH');
+      expect(req.request.body).toMatchObject({ name: 'Stretch for 15 minutes' });
+      req.flush({ ...HABIT, name: 'Stretch for 15 minutes' });
+      await fixture.whenStable();
+
+      expect(root().querySelector('dialog')).toBeNull();
+      expect(root().querySelector('h1')!.textContent).toBe('Stretch for 15 minutes');
+    });
+
+    it('deletes an archived habit after in-app confirmation, then goes home with a toast', async () => {
+      const confirmSpy = vi.spyOn(window, 'confirm');
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      await flushLoad(ARCHIVED);
+
+      button('Delete').click();
+      await fixture.whenStable();
+      expect(root().querySelector('dialog')!.textContent).toContain('cannot be undone');
+      button('Cancel').click();
+      await fixture.whenStable();
+      expect(root().querySelector('dialog')).toBeNull();
+      http.expectNone((r) => r.method === 'DELETE');
+
+      button('Delete').click();
+      await fixture.whenStable();
+      root().querySelector<HTMLButtonElement>('dialog .btn-primary')!.click();
+      await fixture.whenStable();
+      http.expectOne((r) => r.url === '/api/habits/h1' && r.method === 'DELETE').flush(null, { status: 204, statusText: 'No Content' });
+      await fixture.whenStable();
+
+      expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'success' && t.message === '"Stretch for 10 minutes" was deleted')).toBe(true);
+      expect(navigate).toHaveBeenCalledWith(['/']);
+      expect(confirmSpy).not.toHaveBeenCalled();
+    });
+
+    it('shows a toast and stays when the delete fails', async () => {
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      await flushLoad(ARCHIVED);
+      button('Delete').click();
+      await fixture.whenStable();
+      root().querySelector<HTMLButtonElement>('dialog .btn-primary')!.click();
+      await fixture.whenStable();
+      http
+        .expectOne((r) => r.method === 'DELETE')
+        .flush({ error: { code: 'HABIT_NOT_ARCHIVED', message: 'Only archived habits can be deleted', details: [] } }, { status: 409, statusText: 'Conflict' });
+      await fixture.whenStable();
+
+      expect(TestBed.inject(ToastService).toasts().some((t) => t.kind === 'error' && t.message === 'Only archived habits can be deleted')).toBe(true);
+      expect(navigate).not.toHaveBeenCalled();
+      expect(button('Delete').disabled).toBe(false);
+    });
   });
 });
