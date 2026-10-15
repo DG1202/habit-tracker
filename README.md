@@ -8,7 +8,7 @@ days. Sign-in is SSO only (Google or GitHub). Every user sees only their own dat
 
 | Layer | Tech |
 |---|---|
-| Frontend | Angular 21 (standalone components, signals), plain SCSS, light theme |
+| Frontend | Angular 22 (standalone components, signals, zoneless), plain SCSS, light theme |
 | Backend | Node + Fastify 5 + TypeScript |
 | Database | SQLite via Prisma |
 | Realtime | WebSocket (`@fastify/websocket`) |
@@ -16,7 +16,7 @@ days. Sign-in is SSO only (Google or GitHub). Every user sees only their own dat
 
 ## Run locally
 
-Requires Node 22+ and Yarn 1.
+Requires Node ≥ 22.13 and Yarn 4 (`corepack enable` picks the pinned version).
 
 ```bash
 # 1. Backend
@@ -131,7 +131,7 @@ All endpoints are under `/api`, JSON, and require a session unless noted.
 | `GET /habits/:id` | Habit + stats |
 | `PATCH /habits/:id` | Edit fields and/or `status` |
 | `DELETE /habits/:id` | Delete (archived only) |
-| `GET /habits/:id/check-ins?month=YYYY-MM` | Check-in dates for a month |
+| `GET /habits/:id/check-ins?month=YYYY-MM` | `{ month, today, dates }` for a month (default: current) |
 | `POST /habits/:id/check-ins` | Check in today |
 | `DELETE /habits/:id/check-ins/today` | Undo today's check-in |
 
@@ -152,7 +152,8 @@ Client → server:
 
 - `subscribe` — the server sends nothing until it receives this. It registers the socket for the user and
   evaluates milestones immediately.
-- `ack` — marks a notification as read (`ackedAt`); sent when the user dismisses a toast.
+- `ack` — marks a notification as read (`ackedAt`); sent when the user dismisses a milestone toast. Milestone
+  toasts stay on screen until dismissed.
 
 Server → client:
 
@@ -166,7 +167,8 @@ Server → client:
 Milestone rules:
 
 - Milestones: **3, 7, 30** days of current streak.
-- Evaluated when a socket subscribes and after every check-in while connected.
+- Evaluated when a socket subscribes and after every check-in while that user has a subscribed socket
+  (a check-in with no app open does not consume the milestone — it is delivered on the next connect).
 - Sent **once per habit per milestone, ever** — recorded in `MilestoneNotification` (unique per habit +
   milestone) before sending. Reconnecting never resends; rebuilding a broken streak does not resend.
 - No milestone reached → nothing is sent.
