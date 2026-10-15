@@ -104,4 +104,60 @@ describe('MilestoneSocket', () => {
     latest().onmessage?.({ data: 'not json' });
     expect(toasts.toasts()).toEqual([]);
   });
+
+  const milestoneFrame = { type: 'milestone', id: 'n1', habitId: 'h1', habitName: 'Read', milestone: 7, currentStreak: 7, sentAt: '' };
+
+  it('clears milestone toasts on disconnect without acking them', () => {
+    socket.connect();
+    latest().open();
+    latest().receive(milestoneFrame);
+    const first = latest();
+    socket.disconnect();
+    expect(toasts.toasts().filter((t) => t.kind === 'milestone')).toEqual([]);
+    expect(first.sent).not.toContainEqual({ type: 'ack', id: 'n1' });
+  });
+
+  it('keeps non-milestone toasts when clearing milestones', () => {
+    toasts.error('boom');
+    socket.connect();
+    socket.disconnect();
+    expect(toasts.toasts()).toHaveLength(1);
+  });
+
+  it('queues an ack dismissed while offline and flushes it after subscribed', () => {
+    socket.connect();
+    latest().open();
+    latest().receive(milestoneFrame);
+    latest().close();
+    toasts.dismiss(toasts.toasts()[0]!.id);
+
+    vi.advanceTimersByTime(1000);
+    latest().open();
+    expect(latest().sent).toEqual([{ type: 'subscribe', topics: ['milestones'] }]);
+    latest().receive({ type: 'subscribed', topics: ['milestones'] });
+    expect(latest().sent).toContainEqual({ type: 'ack', id: 'n1' });
+  });
+
+  it('drops queued acks on disconnect', () => {
+    socket.connect();
+    latest().open();
+    latest().receive(milestoneFrame);
+    latest().close();
+    toasts.dismiss(toasts.toasts()[0]!.id);
+    socket.disconnect();
+
+    socket.connect();
+    latest().open();
+    latest().receive({ type: 'subscribed', topics: ['milestones'] });
+    expect(latest().sent).toEqual([{ type: 'subscribe', topics: ['milestones'] }]);
+  });
+
+  it('ignores frames from a socket that was disconnected', () => {
+    socket.connect();
+    latest().open();
+    const old = latest();
+    socket.disconnect();
+    old.receive(milestoneFrame);
+    expect(toasts.toasts()).toEqual([]);
+  });
 });

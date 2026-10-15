@@ -38,6 +38,10 @@ export class ToastService {
     toast?.onDismiss?.();
   }
 
+  clearMilestones(): void {
+    this.items.update((list) => list.filter((item) => item.kind !== 'milestone'));
+  }
+
   private remove(id: number): void {
     this.items.update((list) => list.filter((item) => item.id !== id));
   }

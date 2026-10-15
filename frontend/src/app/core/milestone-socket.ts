@@ -19,6 +19,7 @@ export class MilestoneSocket {
   private readonly state = signal<SocketStatus>('disconnected');
   private socket: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private pendingAcks: string[] = [];
   private attempts = 0;
   private active = false;
 
@@ -35,6 +36,8 @@ export class MilestoneSocket {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.reconnectTimer = null;
     this.attempts = 0;
+    this.pendingAcks = [];
+    this.toasts.clearMilestones();
     const socket = this.socket;
     this.socket = null;
     socket?.close();
@@ -48,7 +51,9 @@ export class MilestoneSocket {
     this.state.set('connecting');
 
     socket.onopen = () => socket.send(JSON.stringify({ type: 'subscribe', topics: ['milestones'] }));
-    socket.onmessage = (event: MessageEvent) => this.handle(event.data);
+    socket.onmessage = (event: MessageEvent) => {
+      if (this.socket === socket) this.handle(event.data);
+    };
     socket.onclose = () => {
       if (this.socket !== socket) return;
       this.socket = null;
@@ -68,6 +73,7 @@ export class MilestoneSocket {
     if (message.type === 'subscribed') {
       this.attempts = 0;
       this.state.set('connected');
+      this.flushAcks();
     } else if (message.type === 'milestone') {
       const milestone = message as MilestoneMessage;
       this.toasts.show({
@@ -81,6 +87,13 @@ export class MilestoneSocket {
 
   private ack(id: string): void {
     if (this.socket?.readyState === OPEN) this.socket.send(JSON.stringify({ type: 'ack', id }));
+    else this.pendingAcks.push(id);
+  }
+
+  private flushAcks(): void {
+    const ids = this.pendingAcks;
+    this.pendingAcks = [];
+    ids.forEach((id) => this.ack(id));
   }
 
   private scheduleReconnect(): void {
