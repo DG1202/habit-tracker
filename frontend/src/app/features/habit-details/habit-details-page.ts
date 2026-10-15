@@ -62,6 +62,7 @@ export class HabitDetailsPage {
   protected readonly statusLabels = STATUS_LABELS;
   protected readonly weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((full) => ({ full, short: full.slice(0, 3) }));
   private loadSubscription: Subscription | null = null;
+  private actionSubscription: Subscription | null = null;
 
   protected readonly weeks = computed(() => {
     const month = this.month();
@@ -77,6 +78,10 @@ export class HabitDetailsPage {
     effect(() => {
       this.id();
       untracked(() => {
+        this.actionSubscription?.unsubscribe();
+        this.editing.set(false);
+        this.confirmingDelete.set(false);
+        this.busy.set(false);
         this.habit.set(null);
         this.month.set(null);
         this.load();
@@ -131,7 +136,7 @@ export class HabitDetailsPage {
   protected remove(habit: Habit): void {
     this.confirmingDelete.set(false);
     this.busy.set(true);
-    this.api
+    this.actionSubscription = this.api
       .remove(habit.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -149,7 +154,7 @@ export class HabitDetailsPage {
   private mutate(request: Observable<Habit>): void {
     // load() clears busy when the reload settles, so a second click cannot race it.
     this.busy.set(true);
-    request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.actionSubscription = request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (habit) => this.apply(habit),
       complete: () => this.load(),
       error: (err: unknown) => {

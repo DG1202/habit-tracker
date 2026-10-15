@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   ElementRef,
   inject,
   input,
@@ -49,6 +50,7 @@ export class HabitFormDialog implements OnInit {
   readonly closed = output<void>();
 
   private readonly api = inject(HabitsApi);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
   protected readonly isEdit = computed(() => this.habit() !== null);
@@ -91,7 +93,10 @@ export class HabitFormDialog implements OnInit {
     this.saving.set(true);
     this.serverError.set(null);
     (habit ? this.api.update(habit.id, value) : this.api.create(value))
-      .pipe(finalize(() => this.saving.set(false)))
+      .pipe(
+        finalize(() => this.saving.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (result) => this.saved.emit(result),
         error: (err: unknown) => {

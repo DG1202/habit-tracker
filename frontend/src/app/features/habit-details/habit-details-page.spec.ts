@@ -171,6 +171,67 @@ describe('HabitDetailsPage', () => {
     expect(root().querySelector('h1')!.textContent).toBe('Walk 5,000 steps');
   });
 
+  describe('when the id changes', () => {
+    async function switchToH2() {
+      fixture.componentRef.setInput('id', 'h2');
+      await fixture.whenStable();
+      http.expectOne('/api/habits/h2').flush({ ...HABIT, id: 'h2', name: 'Walk 5,000 steps' });
+      http.expectOne('/api/habits/h2/check-ins').flush(MONTH);
+      await fixture.whenStable();
+    }
+
+    it('closes the edit dialog and cancels its save', async () => {
+      await flushLoad(HABIT);
+      button('Edit').click();
+      await fixture.whenStable();
+      root().querySelector('dialog form')!.dispatchEvent(new Event('submit'));
+      await fixture.whenStable();
+      const save = http.expectOne((r) => r.url === '/api/habits/h1' && r.method === 'PATCH');
+
+      await switchToH2();
+      expect(save.cancelled).toBe(true);
+      expect(root().querySelector('dialog')).toBeNull();
+      expect(root().querySelector('h1')!.textContent).toBe('Walk 5,000 steps');
+    });
+
+    it('closes the delete confirmation', async () => {
+      await flushLoad({ ...HABIT, status: 'ARCHIVED' });
+      button('Delete').click();
+      await fixture.whenStable();
+      expect(root().querySelector('dialog')).not.toBeNull();
+
+      await switchToH2();
+      expect(root().querySelector('dialog')).toBeNull();
+    });
+
+    it('cancels a pending action and does not apply it to the new habit', async () => {
+      await flushLoad(HABIT);
+      button('Check in for today').click();
+      await fixture.whenStable();
+      const post = http.expectOne((r) => r.url === '/api/habits/h1/check-ins' && r.method === 'POST');
+
+      await switchToH2();
+      expect(post.cancelled).toBe(true);
+      expect(button('Check in for today').disabled).toBe(false);
+      http.expectNone('/api/habits/h1');
+    });
+
+    it('cancels a pending delete without navigating away', async () => {
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      await flushLoad({ ...HABIT, status: 'ARCHIVED' });
+      button('Delete').click();
+      await fixture.whenStable();
+      root().querySelector<HTMLButtonElement>('dialog .btn-primary')!.click();
+      await fixture.whenStable();
+      const remove = http.expectOne((r) => r.url === '/api/habits/h1' && r.method === 'DELETE');
+
+      await switchToH2();
+      expect(remove.cancelled).toBe(true);
+      expect(navigate).not.toHaveBeenCalled();
+      expect(button('Check in for today').disabled).toBe(false);
+    });
+  });
+
   it('cancels a pending action when the page is destroyed', async () => {
     await flushLoad(HABIT);
     button('Check in for today').click();
