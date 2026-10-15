@@ -89,6 +89,7 @@ export class MilestoneSocket {
       this.state.set('disconnected');
       if (event.code === SESSION_ENDED) {
         this.auth.clear();
+        this.disconnect();
         void this.router.navigate(['/login']);
       } else if (this.userId !== null) {
         this.scheduleReconnect();

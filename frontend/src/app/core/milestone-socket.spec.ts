@@ -153,6 +153,29 @@ describe('MilestoneSocket', () => {
     expect(FakeSocket.instances).toHaveLength(1);
   });
 
+  it('drops milestone toasts and queued acks itself when the server ends the session (4401)', () => {
+    const frame = { type: 'milestone', habitId: 'h1', habitName: 'Read', milestone: 7, currentStreak: 7, sentAt: '' };
+    socket.connect('u1');
+    latest().open();
+    latest().receive({ type: 'subscribed' });
+    latest().receive({ ...frame, id: 'n1' });
+    latest().receive({ ...frame, id: 'n2' });
+    latest().receive({ ...frame, id: 'n3' });
+    toasts.dismiss(toasts.toasts()[0]!.id);
+    toasts.dismiss(toasts.toasts()[0]!.id);
+    expect(acks(latest())).toHaveLength(1);
+
+    latest().close(4401);
+    expect(toasts.toasts().filter((t) => t.kind === 'milestone')).toEqual([]);
+
+    socket.connect('u1');
+    expect(FakeSocket.instances).toHaveLength(2);
+    latest().open();
+    latest().receive({ type: 'subscribed' });
+    vi.advanceTimersByTime(1000);
+    expect(acks(latest())).toEqual([]);
+  });
+
   it('does not clear the session on an ordinary drop', () => {
     socket.connect('u1');
     latest().open();
