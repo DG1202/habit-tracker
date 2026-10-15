@@ -55,6 +55,16 @@ describe('HabitDetailsPage', () => {
 
   afterEach(() => http.verify());
 
+  it('announces the initial load through a named status region', async () => {
+    const status = root().querySelector('.loading')!;
+    expect(status.getAttribute('role')).toBe('status');
+    expect(status.textContent!.trim()).toBe('Loading habit…');
+    expect(root().querySelector('.spinner')!.getAttribute('aria-hidden')).toBe('true');
+    expect(root().querySelector('[aria-label]:not([role]):not(button):not(a)')).toBeNull();
+    await flushLoad(HABIT);
+    expect(root().querySelector('.loading')).toBeNull();
+  });
+
   it('keeps the button busy until the reload completes, so a second click sends no request', async () => {
     await flushLoad(HABIT);
     await checkIn();

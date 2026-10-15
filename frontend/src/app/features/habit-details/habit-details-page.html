@@ -1,7 +1,7 @@
 <a routerLink="/" class="back">← All habits</a>
 
 @if (loading() && !habit()) {
-  <div class="loading" aria-busy="true"><div class="spinner" aria-label="Loading habit"></div></div>
+  <div class="loading" role="status"><div class="spinner" aria-hidden="true"></div><span class="visually-hidden">Loading habit…</span></div>
 } @else if (error(); as message) {
   <ht-error-banner [message]="message" (retry)="load()" />
 } @else if (habit(); as habit) {
