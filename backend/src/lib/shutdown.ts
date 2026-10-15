@@ -15,7 +15,12 @@ export function createShutdown(app: Closable, prisma: { $disconnect(): Promise<v
       app.log.error({ err: error }, 'Server shutdown failed');
       code = 1;
     }
-    await prisma.$disconnect();
+    try {
+      await prisma.$disconnect();
+    } catch (error) {
+      app.log.error({ err: error }, 'Database disconnect failed');
+      code = 1;
+    }
     exit(code);
   };
 }

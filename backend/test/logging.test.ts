@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp, loggerOptions } from '../src/app.ts';
+import { createShutdown } from '../src/lib/shutdown.ts';
 import { createTestContext, TEST_CONFIG, type TestContext } from './helpers.ts';
 
 describe('log redaction', () => {
@@ -47,5 +48,14 @@ describe('log redaction', () => {
     expect(res.statusCode).toBe(500);
     expect(output).toContain('Unhandled error');
     expect(output).not.toContain('leak@example.test');
+  });
+
+  it('never logs the message of a failed database disconnect at shutdown', async () => {
+    const prisma = { $disconnect: async () => { throw new Error('disconnect failed for file:/leak/path.db'); } };
+    let exitCode: number | null = null;
+    await createShutdown(app, prisma, (code) => void (exitCode = code))();
+    expect(exitCode).toBe(1);
+    expect(output).toContain('Database disconnect failed');
+    expect(output).not.toContain('/leak/path.db');
   });
 });
