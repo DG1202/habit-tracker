@@ -69,6 +69,16 @@ describe('HabitDetailsPage', () => {
     expect(button('✓ Done today · Undo').disabled).toBe(false);
   });
 
+  it('sends one request for a double click that lands before the button re-renders as disabled', async () => {
+    await flushLoad(HABIT);
+    button('Check in for today').click();
+    button('Check in for today').click();
+    await fixture.whenStable();
+    http.expectOne((r) => r.url === '/api/habits/h1/check-ins' && r.method === 'POST').flush(DONE);
+    await fixture.whenStable();
+    await flushLoad(DONE);
+  });
+
   it('keeps the page and shows a toast when the reload after a successful check-in fails', async () => {
     await flushLoad(HABIT);
     await checkIn();

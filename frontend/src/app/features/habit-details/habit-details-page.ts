@@ -135,6 +135,7 @@ export class HabitDetailsPage {
 
   protected remove(habit: Habit): void {
     this.confirmingDelete.set(false);
+    if (this.busy()) return;
     this.busy.set(true);
     this.actionSubscription = this.api
       .remove(habit.id)
@@ -152,7 +153,8 @@ export class HabitDetailsPage {
   }
 
   private mutate(request: Observable<Habit>): void {
-    // load() clears busy when the reload settles, so a second click cannot race it.
+    // load() clears busy when the reload settles; [disabled] lags a render, so guard here too.
+    if (this.busy()) return;
     this.busy.set(true);
     this.actionSubscription = request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (habit) => this.apply(habit),

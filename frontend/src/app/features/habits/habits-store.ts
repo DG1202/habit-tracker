@@ -96,6 +96,8 @@ export class HabitsStore {
   }
 
   private run(id: string, request: Observable<Habit | void>, successMessage?: string): void {
+    // [disabled] only applies on the next render, so a fast second click still reaches here.
+    if (this.busyIds().has(id)) return;
     this.setBusy(id, true);
     request.subscribe({
       next: (updated) => {

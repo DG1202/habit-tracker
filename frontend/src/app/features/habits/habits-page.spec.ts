@@ -140,6 +140,17 @@ describe('HabitsPage', () => {
       expect(text()).toContain('Undo');
     });
 
+    it('sends one request for a double click that lands before the button re-renders as disabled', async () => {
+      await load(HABIT);
+      button('Check in').click();
+      button('Check in').click();
+      await fixture.whenStable();
+      http.expectOne('/api/habits/h1/check-ins').flush({ ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } });
+      await fixture.whenStable();
+      list().flush([{ ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } }]);
+      await fixture.whenStable();
+    });
+
     it('keeps the button busy until the reload completes, so a second click sends no request', async () => {
       const done = { ...HABIT, stats: { ...HABIT.stats, checkedInToday: true } };
       await load(HABIT);
