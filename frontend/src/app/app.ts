@@ -22,6 +22,10 @@ export class App {
   private readonly socket = inject(MilestoneSocket);
 
   constructor() {
-    effect(() => (this.auth.user() ? this.socket.connect() : this.socket.disconnect()));
+    effect(() => {
+      const user = this.auth.user();
+      if (user) this.socket.connect(user.id);
+      else this.socket.disconnect();
+    });
   }
 }
