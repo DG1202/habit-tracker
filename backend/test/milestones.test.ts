@@ -229,6 +229,25 @@ describe('WebSocket milestone notifications', () => {
     expect(milestonesOf(expired.messages)).toEqual([]);
   });
 
+  it('rate-limits inbound frames per socket and closes the socket on sustained abuse', async () => {
+    const socket = await connect(alice);
+    const other = await connect(alice);
+    for (let i = 0; i < 21; i++) socket.ws.send('flood');
+    await waitFor(() => socket.messages.length === 21);
+    expect(socket.messages.slice(0, 20).every((m) => m.code === 'INVALID_MESSAGE')).toBe(true);
+    expect(socket.messages[20]).toMatchObject({ type: 'error', code: 'RATE_LIMITED' });
+
+    ctx.clock.set('2026-10-15T12:00:01.000Z');
+    await subscribe(socket);
+    await subscribe(other);
+
+    for (let i = 0; i < 30; i++) socket.ws.send('flood');
+    await waitFor(() => socket.closeCode !== null);
+    expect(socket.closeCode).toBe(1008);
+    expect(other.closeCode).toBeNull();
+    await roundTrip(other);
+  });
+
   it('rejects an ack from a socket whose session has expired', async () => {
     await createHabitWithStreak(ctx, aliceId, { days: 3, endingOn: '2026-10-15' });
     const socket = await connect(alice);

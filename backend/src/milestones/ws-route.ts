@@ -2,7 +2,9 @@ import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
 import { z } from 'zod';
 import type { Config } from '../config.ts';
+import type { Clock } from '../lib/clock.ts';
 import { AppError } from '../lib/errors.ts';
+import { createTokenBucket } from '../lib/token-bucket.ts';
 import { SESSION_ENDED_CLOSE_CODE, type Hub } from './hub.ts';
 import type { MilestoneNotifier, MilestoneService } from './service.ts';
 
@@ -10,6 +12,10 @@ const ClientMessage = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('subscribe'), topics: z.array(z.literal('milestones')).min(1) }),
   z.strictObject({ type: z.literal('ack'), id: z.string().min(1).max(64) }),
 ]);
+
+const FRAME_RATE = { capacity: 20, refillPerSecond: 5 };
+const MAX_CONSECUTIVE_LIMITED = 10;
+const RATE_LIMITED_CLOSE_CODE = 1008;
 
 const send = (socket: WebSocket, message: object) => socket.send(JSON.stringify(message));
 
@@ -25,12 +31,13 @@ function parse(raw: Buffer, isBinary: boolean) {
 
 export interface WsRouteDeps {
   config: Config;
+  clock: Clock;
   hub: Hub;
   milestones: MilestoneService;
   notifier: MilestoneNotifier;
 }
 
-export async function wsRoutes(app: FastifyInstance, { config, hub, milestones, notifier }: WsRouteDeps) {
+export async function wsRoutes(app: FastifyInstance, { config, clock, hub, milestones, notifier }: WsRouteDeps) {
   app.get(
     '/ws',
     {
@@ -49,9 +56,20 @@ export async function wsRoutes(app: FastifyInstance, { config, hub, milestones, 
       hub.add(userId, socket, request.session);
       // Repeated subscribes share the first evaluation; later milestones arrive through check-ins.
       let subscribed: Promise<void> | null = null;
+      const frames = createTokenBucket(FRAME_RATE, clock);
+      let limitedInARow = 0;
 
       socket.on('message', async (raw: Buffer, isBinary: boolean) => {
         if (!hub.isLive(userId, socket)) return;
+        if (!frames.take()) {
+          if (++limitedInARow >= MAX_CONSECUTIVE_LIMITED) {
+            socket.close(RATE_LIMITED_CLOSE_CODE, 'Too many messages');
+            return;
+          }
+          send(socket, { type: 'error', code: 'RATE_LIMITED', message: 'Too many messages. Slow down.' });
+          return;
+        }
+        limitedInARow = 0;
         const message = parse(raw, isBinary);
         if (!message) {
           send(socket, { type: 'error', code: 'INVALID_MESSAGE', message: 'Expected {"type":"subscribe","topics":["milestones"]} or {"type":"ack","id":"…"}' });

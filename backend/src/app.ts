@@ -103,7 +103,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     },
     { prefix: '/api' },
   );
-  await app.register(wsRoutes, { config, hub, milestones, notifier });
+  await app.register(wsRoutes, { config, clock, hub, milestones, notifier });
 
   app.get('/api/health', async () => ({ status: 'ok' }));
   return app;

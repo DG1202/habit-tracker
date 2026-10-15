@@ -178,6 +178,12 @@ Server → client:
 { "type": "error", "code": "INVALID_MESSAGE", "message": "…" }
 ```
 
+`error` codes: `INVALID_MESSAGE`, `NOT_FOUND` (unknown or foreign notification id), `RATE_LIMITED`, `INTERNAL`.
+
+Inbound frames are rate-limited per socket: a burst of 20, refilling at 5 frames per second. Each frame over
+the limit is answered with `RATE_LIMITED` and otherwise ignored; 10 limited frames in a row close the socket
+with code `1008` (policy violation). Frames are capped at 4 KB; a larger frame closes the socket with `1009`.
+
 Milestone rules:
 
 - Milestones: **3, 7, 30** days of current streak.
