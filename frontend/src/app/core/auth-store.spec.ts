@@ -130,6 +130,8 @@ describe('AuthStore', () => {
   });
 
   it.each([
+    ['a 403 (origin check)', (req: TestRequest) => req.flush(null, { status: 403, statusText: 'Forbidden' })],
+    ['a 429 (rate limit)', (req: TestRequest) => req.flush(null, { status: 429, statusText: 'Too Many Requests' })],
     ['a 5xx', (req: TestRequest) => req.flush(null, { status: 502, statusText: 'Bad Gateway' })],
     ['a network error', (req: TestRequest) => req.error(new ProgressEvent('error'))],
   ])('stays signed in and shows an error toast when logout fails with %s', async (_label, fail) => {
