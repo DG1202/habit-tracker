@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
 import { z } from 'zod';
-import type { Config } from '../config.ts';
+import { isAllowedOrigin, type Config } from '../config.ts';
 import type { Clock } from '../lib/clock.ts';
 import { AppError } from '../lib/errors.ts';
 import { createTokenBucket } from '../lib/token-bucket.ts';
@@ -43,7 +43,7 @@ export async function wsRoutes(app: FastifyInstance, { config, clock, hub, miles
     {
       websocket: true,
       preValidation: async (request) => {
-        if (request.headers.origin !== config.APP_ORIGIN) throw new AppError(403, 'FORBIDDEN_ORIGIN', 'Origin not allowed');
+        if (!isAllowedOrigin(request.headers.origin, config)) throw new AppError(403, 'FORBIDDEN_ORIGIN', 'Origin not allowed');
       },
     },
     (socket, request) => {

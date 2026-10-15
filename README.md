@@ -55,7 +55,7 @@ Google or GitHub and need no credentials.
 |---|---|---|
 | `NODE_ENV` | `development` | `production` enables `Secure` cookies (requires HTTPS) |
 | `PORT` | `3300` | Backend port |
-| `APP_ORIGIN` | `http://localhost:4300` | Public origin; used for OAuth redirect URIs and Origin checks |
+| `APP_ORIGIN` | `http://localhost:4300` | Public origin (`http`/`https`, no path, query or hash); used for OAuth redirect URIs and Origin checks |
 | `DATABASE_URL` | `file:./dev.db` | SQLite file |
 | `SESSION_SECRET` | 32+ random chars | `openssl rand -hex 32` |
 | `GOOGLE_CLIENT_ID` | | Google OAuth client |
@@ -224,7 +224,7 @@ Client behavior (`frontend/src/app/core/milestone-socket.ts`):
 - OAuth authorization-code flow with `state` and PKCE; provider tokens are not stored.
 - Session token stored only as a SHA-256 hash; cookie is `HttpOnly`, `SameSite=Lax`, `Secure` in production.
 - A successful sign-in revokes the browser's previous session (and closes its sockets), whichever user it belonged to.
-- Mutating requests and WS upgrades require `Origin == APP_ORIGIN` (CSRF / cross-site WebSocket protection).
+- Mutating requests and WS upgrades require `Origin == APP_ORIGIN` (CSRF / cross-site WebSocket protection); `Origin: null` is always rejected.
 - Every habit/check-in query is scoped to the session user.
 - zod validation on all inputs, 16 KB body limit, `helmet` headers, rate limiting on SSO and logout routes.
 - Local run is plain HTTP; production must use HTTPS with `NODE_ENV=production`.

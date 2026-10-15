@@ -1,3 +1,4 @@
+import type { Socket } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.ts';
 import { createTestContext, ORIGIN, signIn, TEST_CONFIG, type TestContext } from './helpers.ts';
@@ -51,6 +52,26 @@ describe('security hardening', () => {
     const res = await app.inject({ method: 'GET', url: '/api/auth/google/callback?code=valid-code&state=stub-state' });
     await app.close();
     expect(res.cookies.find((cookie) => cookie.name === 'sid')).toMatchObject({ secure: true, httpOnly: true });
+  });
+
+  it('rejects a "null" Origin on mutating requests and WS upgrades even if APP_ORIGIN is "null"', async () => {
+    const cookie = await signIn(ctx);
+    const app = await buildApp({
+      config: { ...TEST_CONFIG, APP_ORIGIN: 'null' },
+      prisma: ctx.prisma,
+      clock: ctx.clock,
+      providers: ctx.providers.clients,
+      logger: false,
+    });
+    try {
+      const res = await app.inject({ method: 'POST', url: '/api/auth/logout', headers: { origin: 'null', cookie } });
+      expect(res.statusCode).toBe(403);
+      expect(res.json().error.code).toBe('FORBIDDEN_ORIGIN');
+      const socket = { remoteAddress: '127.0.0.1' } as Socket;
+      await expect(app.injectWS('/ws', { headers: { origin: 'null', cookie }, socket })).rejects.toThrow('Unexpected server response: 403');
+    } finally {
+      await app.close();
+    }
   });
 
   it('rejects oversized bodies', async () => {

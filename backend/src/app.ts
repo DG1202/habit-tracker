@@ -1,5 +1,5 @@
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
-import type { Config } from './config.ts';
+import { isAllowedOrigin, type Config } from './config.ts';
 import type { PrismaClient } from './db.ts';
 import { systemClock, type Clock } from './lib/clock.ts';
 import { AppError, errorHandler } from './lib/errors.ts';
@@ -75,7 +75,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.decorateRequest('user', null);
   app.decorateRequest('session', null);
   app.addHook('onRequest', async (request) => {
-    if (MUTATING_METHODS.has(request.method) && request.headers.origin !== config.APP_ORIGIN) {
+    if (MUTATING_METHODS.has(request.method) && !isAllowedOrigin(request.headers.origin, config)) {
       throw new AppError(403, 'FORBIDDEN_ORIGIN', 'Request origin is not allowed');
     }
     const resolved = await sessions.resolve(readSessionToken(request));
