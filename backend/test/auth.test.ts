@@ -161,6 +161,20 @@ describe('SSO authentication', () => {
     expect(me.statusCode).toBe(401);
   });
 
+  it.each([
+    ['PUT', '/api/me/timezone'],
+    ['POST', '/api/auth/logout'],
+  ] as const)('answers 401 before looking at the body of an unauthenticated %s %s', async (method, url) => {
+    for (const [contentType, payload] of [
+      ['application/json', '{"timezone":'],
+      ['text/plain', 'timezone=UTC'],
+    ]) {
+      const res = await ctx.app.inject({ method, url, headers: { origin: ORIGIN, 'content-type': contentType! }, payload });
+      expect(res.statusCode).toBe(401);
+      expect(res.json().error.code).toBe('UNAUTHENTICATED');
+    }
+  });
+
   it('rejects state-changing requests from another origin', async () => {
     const cookie = await signIn(ctx);
     const res = await request(ctx, cookie, { method: 'POST', url: '/api/auth/logout', headers: { origin: 'https://evil.example.test' } });

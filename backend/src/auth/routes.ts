@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { Config } from '../config.ts';
 import type { PrismaClient } from '../db.ts';
@@ -19,6 +19,10 @@ export interface AuthRouteDeps {
 const ProviderParams = z.object({ provider: z.enum(['google', 'github']) });
 const TimezoneBody = z.strictObject({ timezone: z.string().max(64).refine(isValidTimeZone, 'Unknown timezone') });
 const AUTH_RATE_LIMIT = { rateLimit: { max: 20, timeWindow: '1 minute' } };
+// preParsing: after rate limiting, before the body is parsed, so unauthenticated requests get 401 not 400/415.
+const requireUser = async (request: FastifyRequest) => {
+  currentUser(request);
+};
 
 function upsertUser(prisma: PrismaClient, provider: ProviderName, profile: ProviderProfile) {
   const { providerUserId, email, displayName, avatarUrl } = profile;
@@ -59,14 +63,14 @@ export async function authRoutes(app: FastifyInstance, { config, prisma, session
 
   app.get('/auth/me', async (request) => toUserDto(currentUser(request)));
 
-  app.post('/auth/logout', { config: AUTH_RATE_LIMIT }, async (request, reply) => {
+  app.post('/auth/logout', { config: AUTH_RATE_LIMIT, preParsing: requireUser }, async (request, reply) => {
     await sessions.destroy(readSessionToken(request));
     if (request.session) hub.closeSession(request.session.id);
     reply.clearCookie(SESSION_COOKIE, { path: '/' });
     return reply.status(204).send();
   });
 
-  app.put('/me/timezone', async (request, reply) => {
+  app.put('/me/timezone', { preParsing: requireUser }, async (request, reply) => {
     const user = currentUser(request);
     const { timezone } = TimezoneBody.parse(request.body);
     await prisma.user.update({ where: { id: user.id }, data: { timezone } });
