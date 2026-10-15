@@ -35,6 +35,10 @@ instead of exiting — fix `.env` and it restarts.
 Open **http://localhost:4300**. Always use this origin — OAuth redirect URIs and cookie/origin checks are
 bound to it.
 
+Sign in locally with **Chrome or Firefox**. The OAuth cookies use the `__Host-` prefix, which requires
+`Secure`; Chrome and Firefox treat `http://localhost` as secure, but Safari may reject these cookies over plain
+HTTP, so sign-in fails there.
+
 ## Run tests
 
 ```bash
@@ -90,6 +94,8 @@ identity is `provider + provider_user_id`.
   same person.
 - Sessions are server-side (httpOnly cookie, 30 days), so login persists across refresh. Logout deletes the
   session.
+- At startup only a `401` from `/api/auth/me` counts as signed out. A network error or `5xx` shows a "Cannot
+  reach the server" banner with Retry instead of redirecting to `/login`.
 
 ## Habits and check-ins
 
@@ -194,8 +200,18 @@ Milestone rules:
   last subscribed socket closes during evaluation, the undelivered record is removed so the next connect delivers it.
 - No milestone reached → nothing is sent.
 - Logout closes that session's sockets, and a socket whose session has expired is closed instead of receiving
-  milestones or acks; both use close code `4401`. The client then treats the user as signed out and does not
-  reconnect.
+  milestones or acks; both use close code `4401`.
+
+Client behavior (`frontend/src/app/core/milestone-socket.ts`):
+
+- On close code `4401` the client clears the signed-in user, navigates to `/login` and does not reconnect.
+- On any other close (including `1008` after rate limiting) it reconnects with exponential backoff (1 s doubling
+  to a 30 s cap), each delay randomized to 50–100% of its step; the backoff resets once the server replies
+  `subscribed`.
+- Acks are sent at most 4 per second (dismissed while offline, they are queued and flushed after `subscribed`
+  at the same pace), which stays under the 5 frames/s refill however many toasts are dismissed at once.
+- Malformed frames and `error` frames are ignored; milestone frames are shape-checked before a toast is shown.
+- Signing out or switching user drops the previous user's milestone toasts and queued acks.
 
 ## Security notes
 
