@@ -492,7 +492,7 @@ describe('HabitsPage', () => {
       expect(unhandled).not.toHaveBeenCalled();
     });
 
-    it('cancels a pending delete when the user signs out, so its response shows no toast', async () => {
+    async function signIn() {
       vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
       const loaded = TestBed.inject(AuthStore).ensureLoaded();
       const user: User = {
@@ -505,6 +505,10 @@ describe('HabitsPage', () => {
       };
       http.expectOne('/api/auth/me').flush(user);
       await loaded;
+    }
+
+    it('cancels a pending delete when the user signs out, so its response shows no toast', async () => {
+      await signIn();
       await load({ ...HABIT, status: 'ARCHIVED' });
       button('Delete').click();
       await fixture.whenStable();
@@ -521,17 +525,7 @@ describe('HabitsPage', () => {
     });
 
     it('cancels the reload after an action when the user signs out, so it shows no toast', async () => {
-      vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-      const loaded = TestBed.inject(AuthStore).ensureLoaded();
-      http.expectOne('/api/auth/me').flush({
-        id: 'u1',
-        provider: 'github',
-        email: null,
-        displayName: 'Alice Test',
-        avatarUrl: null,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      } satisfies User);
-      await loaded;
+      await signIn();
       await load(HABIT);
       button('Check in').click();
       await fixture.whenStable();
@@ -545,6 +539,19 @@ describe('HabitsPage', () => {
       http.expectOne('/api/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
       await fixture.whenStable();
       expect(reload.cancelled).toBe(true);
+      expect(TestBed.inject(ToastService).toasts()).toEqual([]);
+    });
+
+    it('cancels a pending action when the session is cleared by a 401 or a 4401 close', async () => {
+      await signIn();
+      await load(HABIT);
+      button('Check in').click();
+      await fixture.whenStable();
+      const post = http.expectOne('/api/habits/h1/check-ins');
+
+      TestBed.inject(AuthStore).clear();
+      await fixture.whenStable();
+      expect(post.cancelled).toBe(true);
       expect(TestBed.inject(ToastService).toasts()).toEqual([]);
     });
 
