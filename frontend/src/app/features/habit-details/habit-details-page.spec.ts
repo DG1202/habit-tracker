@@ -13,6 +13,7 @@ const HABIT: Habit = {
   description: '',
   startDate: '2026-10-01',
   status: 'ACTIVE',
+  startsInFuture: false,
   stats: { currentStreak: 2, bestStreak: 5, totalCheckIns: 8, checkedInToday: false },
   createdAt: '2026-10-01T00:00:00.000Z',
   updatedAt: '2026-10-01T00:00:00.000Z',
@@ -114,10 +115,16 @@ describe('HabitDetailsPage', () => {
     expect(text()).toContain('This habit does not exist or is not yours.');
   });
 
-  it('shows a disabled "Starts on" instead of Check in for a habit that starts in the future', async () => {
-    await flushLoad({ ...HABIT, startDate: '2999-01-01' });
+  it('shows a disabled "Starts on" instead of Check in when the server says the habit starts in the future', async () => {
+    await flushLoad({ ...HABIT, startDate: '2999-01-01', startsInFuture: true });
     expect(button('Starts on 2999-01-01').disabled).toBe(true);
     expect(button('Check in for today')).toBeUndefined();
+  });
+
+  it("follows the server's startsInFuture rather than comparing dates", async () => {
+    await flushLoad({ ...HABIT, startDate: '2026-10-20', startsInFuture: false });
+    expect(button('Check in for today').disabled).toBe(false);
+    expect(button('Starts on 2026-10-20')).toBeUndefined();
   });
 
   it('renders the month as a table with weekday headers and readable day labels', async () => {

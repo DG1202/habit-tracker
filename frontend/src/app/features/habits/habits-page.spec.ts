@@ -13,6 +13,7 @@ const HABIT: Habit = {
   description: 'Before bed',
   startDate: '2026-10-01',
   status: 'ACTIVE',
+  startsInFuture: false,
   stats: { currentStreak: 4, bestStreak: 9, totalCheckIns: 21, checkedInToday: false },
   createdAt: '2026-10-01T00:00:00.000Z',
   updatedAt: '2026-10-01T00:00:00.000Z',
@@ -189,10 +190,25 @@ describe('HabitsPage', () => {
       expect(stats).toMatch(/Total\s*21/);
     });
 
-    it('shows a disabled "Starts on" instead of Check in for a habit that starts in the future', async () => {
-      await load({ ...HABIT, startDate: '2999-01-01' });
+    it('shows a disabled "Starts on" instead of Check in when the server says the habit starts in the future', async () => {
+      await load({ ...HABIT, startDate: '2999-01-01', startsInFuture: true });
       expect(button('Starts on 2999-01-01').disabled).toBe(true);
       expect(button('Check in')).toBeUndefined();
+    });
+
+    it("follows the server's startsInFuture rather than the client clock", async () => {
+      await settle();
+      list().flush([
+        { ...HABIT, id: 'past', name: 'Past by client clock', startDate: '2000-01-01', startsInFuture: true },
+        { ...HABIT, id: 'future', name: 'Future by client clock', startDate: '2999-01-01', startsInFuture: false },
+      ]);
+      await fixture.whenStable();
+      expect(button('Starts on 2000-01-01').disabled).toBe(true);
+      expect(button('Starts on 2999-01-01')).toBeUndefined();
+      expect(Array.from(root().querySelectorAll<HTMLButtonElement>('.habit-today button')).map((b) => b.textContent!.trim())).toEqual([
+        'Starts on 2000-01-01',
+        'Check in',
+      ]);
     });
 
     it('undoes today\'s check-in', async () => {

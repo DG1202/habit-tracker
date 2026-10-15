@@ -12,6 +12,7 @@ const HABIT: Habit = {
   description: '',
   startDate: '2026-10-01',
   status: 'ACTIVE',
+  startsInFuture: false,
   stats: { currentStreak: 0, bestStreak: 0, totalCheckIns: 0, checkedInToday: false },
   createdAt: '2026-10-01T00:00:00.000Z',
   updatedAt: '2026-10-01T00:00:00.000Z',

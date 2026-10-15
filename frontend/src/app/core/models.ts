@@ -13,6 +13,7 @@ export interface Habit {
   description: string;
   startDate: string;
   status: HabitStatus;
+  startsInFuture: boolean;
   stats: HabitStats;
   createdAt: string;
   updatedAt: string;

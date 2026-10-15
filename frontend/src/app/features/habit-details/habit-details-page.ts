@@ -5,7 +5,6 @@ import { forkJoin, type Observable, type Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { toApiError } from '../../core/api-error';
 import { HabitsApi } from '../../core/habits-api';
-import { localToday } from '../../core/local-date';
 import type { Habit, HabitStatus, MonthCheckIns } from '../../core/models';
 import { ToastService } from '../../core/toast-service';
 import { ConfirmDialog } from '../../shared/confirm-dialog';
@@ -62,7 +61,6 @@ export class HabitDetailsPage {
   protected readonly statusLabels = STATUS_LABELS;
   protected readonly weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((full) => ({ full, short: full.slice(0, 3) }));
   private loadSubscription: Subscription | null = null;
-  protected readonly today = computed(() => this.month()?.today ?? localToday());
 
   protected readonly weeks = computed(() => {
     const month = this.month();
