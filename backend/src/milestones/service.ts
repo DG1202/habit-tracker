@@ -53,6 +53,10 @@ export function createMilestoneService(prisma: PrismaClient, clock: Clock) {
       return messages;
     },
 
+    async release(id: string): Promise<void> {
+      await prisma.milestoneNotification.deleteMany({ where: { id } });
+    },
+
     async ack(userId: string, id: string): Promise<boolean> {
       const notification = await prisma.milestoneNotification.findFirst({ where: { id, habit: { userId } } });
       if (!notification) return false;
@@ -71,7 +75,10 @@ export function createMilestoneNotifier(hub: Hub, milestones: MilestoneService) 
     async notifyUser(userId: string): Promise<void> {
       // Recording a milestone as sent with nobody listening would lose it, so only evaluate while subscribed.
       if (!hub.has(userId)) return;
-      for (const message of await milestones.collectNew(userId)) hub.send(userId, message);
+      for (const message of await milestones.collectNew(userId)) {
+        // The last subscriber left mid-evaluation: un-record it so the next connect delivers it.
+        if (hub.send(userId, message) === 0) await milestones.release(message.id);
+      }
     },
   };
 }

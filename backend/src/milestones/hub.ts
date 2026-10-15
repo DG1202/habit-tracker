@@ -62,11 +62,16 @@ export function createHub(clock: Clock) {
     has(userId: string): boolean {
       return subscribers(userId).length > 0;
     },
-    send(userId: string, message: object): void {
+    // Returns how many sockets the message was written to.
+    send(userId: string, message: object): number {
       const data = JSON.stringify(message);
+      let sent = 0;
       for (const socket of subscribers(userId)) {
-        if (socket.readyState === socket.OPEN) socket.send(data);
+        if (socket.readyState !== socket.OPEN) continue;
+        socket.send(data);
+        sent++;
       }
+      return sent;
     },
   };
 }

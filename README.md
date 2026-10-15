@@ -183,7 +183,8 @@ Milestone rules:
 - Evaluated when a socket subscribes and after every check-in while that user has a subscribed socket
   (a check-in with no app open does not consume the milestone — it is delivered on the next connect).
 - Sent **once per habit per milestone, ever** — recorded in `MilestoneNotification` (unique per habit +
-  milestone) before sending. Reconnecting never resends; rebuilding a broken streak does not resend.
+  milestone) before sending. Reconnecting never resends; rebuilding a broken streak does not resend. If the
+  last subscribed socket closes during evaluation, the undelivered record is removed so the next connect delivers it.
 - No milestone reached → nothing is sent.
 - Logout closes that session's sockets, and a socket whose session has expired is closed instead of receiving
   milestones or acks; both use close code `4401`. The client then treats the user as signed out and does not
