@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createTestContext, openSocket, ORIGIN, request, signIn, waitFor, type TestContext } from './helpers.ts';
+import { createTestContext, openSocket, ORIGIN, request, signIn, subscribe, waitFor, type TestContext } from './helpers.ts';
 
 describe('SSO authentication', () => {
   let ctx: TestContext;
@@ -92,6 +92,30 @@ describe('SSO authentication', () => {
     await waitFor(() => socket.closeCode !== null);
     expect(socket.closeCode).toBe(4401);
     socket.ws.terminate();
+  });
+
+  it("revokes only this browser's prior session; the same user's other device keeps its session and socket", async () => {
+    const browser = await signIn(ctx, 'google');
+    const otherDevice = await signIn(ctx, 'google');
+    const browserSocket = await openSocket(ctx, browser);
+    const otherSocket = await openSocket(ctx, otherDevice);
+
+    const res = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/auth/google/callback?code=valid-code&state=stub-state',
+      headers: { cookie: browser },
+    });
+    expect(res.cookies.find((cookie) => cookie.name === 'sid')).toBeDefined();
+
+    expect((await request(ctx, browser, { method: 'GET', url: '/api/auth/me' })).statusCode).toBe(401);
+    expect((await request(ctx, otherDevice, { method: 'GET', url: '/api/auth/me' })).statusCode).toBe(200);
+    expect(await ctx.prisma.session.count()).toBe(2);
+    await waitFor(() => browserSocket.closeCode !== null);
+    expect(browserSocket.closeCode).toBe(4401);
+    await subscribe(otherSocket);
+    expect(otherSocket.closeCode).toBeNull();
+    browserSocket.ws.terminate();
+    otherSocket.ws.terminate();
   });
 
   it('keeps the prior session when the new sign-in fails', async () => {
