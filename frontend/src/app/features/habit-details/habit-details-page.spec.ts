@@ -138,6 +138,42 @@ describe('HabitDetailsPage', () => {
     expect(text()).toContain('Started 2026-10-01');
   });
 
+  it.each(['PAUSED', 'ARCHIVED'] as const)('says "Starts on" for a %s habit whose start date is after the server today', async (status) => {
+    await flushLoad({ ...HABIT, status, startDate: '2026-10-20', startsInFuture: false });
+    expect(text()).toContain('Starts on 2026-10-20');
+    expect(text()).not.toContain('Started');
+  });
+
+  it('keeps "Started" for a paused habit whose start date is the server today', async () => {
+    await flushLoad({ ...HABIT, status: 'PAUSED', startDate: MONTH.today });
+    expect(text()).toContain(`Started ${MONTH.today}`);
+  });
+
+  describe('empty state copy', () => {
+    const empty = (over: Partial<Habit>): Habit => ({ ...HABIT, ...over, stats: { ...HABIT.stats, totalCheckIns: 0 } });
+
+    it('says when check-ins open for an active habit that starts in the future', async () => {
+      await flushLoad(empty({ startDate: '2026-10-20', startsInFuture: true }));
+      expect(text()).toContain('Check-ins open on 2026-10-20.');
+      expect(text()).not.toContain('Check in today');
+    });
+
+    it('tells the user to resume a paused habit', async () => {
+      await flushLoad(empty({ status: 'PAUSED' }));
+      expect(text()).toContain('Resume this habit to check in.');
+    });
+
+    it('says an archived habit had no check-ins', async () => {
+      await flushLoad(empty({ status: 'ARCHIVED' }));
+      expect(text()).toContain('This habit was archived before any check-ins.');
+    });
+
+    it('keeps the default copy for an active habit that has started', async () => {
+      await flushLoad(empty({}));
+      expect(text()).toContain('Check in today to start your first streak.');
+    });
+  });
+
   it("follows the server's startsInFuture rather than comparing dates", async () => {
     await flushLoad({ ...HABIT, startDate: '2026-10-20', startsInFuture: false });
     expect(button('Check in for today').disabled).toBe(false);

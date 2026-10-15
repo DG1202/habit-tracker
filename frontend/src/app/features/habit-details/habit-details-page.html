@@ -23,7 +23,7 @@
         <p>{{ habit.description }}</p>
       }
       @if (!habit.startsInFuture) {
-        <p class="muted meta">Started {{ habit.startDate }}</p>
+        <p class="muted meta">{{ startsAfterToday() ? 'Starts on' : 'Started' }} {{ habit.startDate }}</p>
       }
       @if (habit.status === 'ACTIVE') {
         <div>
@@ -47,7 +47,7 @@
     </dl>
 
     @if (habit.stats.totalCheckIns === 0) {
-      <ht-empty-state icon="📅" title="No check-ins yet" message="Check in today to start your first streak." />
+      <ht-empty-state icon="📅" title="No check-ins yet" [message]="emptyMessage()" />
     } @else {
       <section class="card calendar" aria-labelledby="calendar-title">
         <h2 id="calendar-title">{{ monthLabel() }}</h2>

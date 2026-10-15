@@ -69,6 +69,20 @@ export class HabitDetailsPage {
     return month ? buildMonthGrid(month.month, month.dates, month.today) : [];
   });
 
+  protected readonly startsAfterToday = computed(() => {
+    const habit = this.habit();
+    const today = this.month()?.today;
+    return !!habit && !!today && habit.startDate > today;
+  });
+
+  protected readonly emptyMessage = computed(() => {
+    const habit = this.habit();
+    if (habit?.status === 'PAUSED') return 'Resume this habit to check in.';
+    if (habit?.status === 'ARCHIVED') return 'This habit was archived before any check-ins.';
+    if (habit?.startsInFuture) return `Check-ins open on ${habit.startDate}.`;
+    return 'Check in today to start your first streak.';
+  });
+
   protected readonly monthLabel = computed(() => {
     const month = this.month()?.month;
     return month ? new Date(`${month}-01T00:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
