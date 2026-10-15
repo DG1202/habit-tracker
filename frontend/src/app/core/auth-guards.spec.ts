@@ -24,6 +24,10 @@ describe('auth guards', () => {
     expect(await run(authGuard, USER)).toBe(true);
   });
 
+  it('lets anonymous users reach /login', async () => {
+    expect(await run(guestGuard, null)).toBe(true);
+  });
+
   it('keeps signed-in users away from /login', async () => {
     const result = await run(guestGuard, USER);
     expect(TestBed.inject(Router).serializeUrl(result as UrlTree)).toBe('/');
