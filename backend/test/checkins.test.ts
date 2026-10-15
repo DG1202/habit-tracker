@@ -114,4 +114,12 @@ describe('check-ins API', () => {
     expect(await ctx.prisma.checkIn.count()).toBe(1);
     expect(await ctx.prisma.checkIn.findFirst({ where: { habitId: habit.id, date: '2026-10-15' } })).not.toBeNull();
   });
+
+  it("rejects another user's check-in on a habit with no check-in today and writes nothing", async () => {
+    const bob = await signIn(ctx, 'github');
+    const habit = await createHabitWithStreak(ctx, aliceId, { days: 0, endingOn: '2026-10-15' });
+
+    expect((await checkIn(bob, habit.id)).statusCode).toBe(404);
+    expect(await ctx.prisma.checkIn.count({ where: { habitId: habit.id } })).toBe(0);
+  });
 });
