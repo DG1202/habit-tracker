@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum HabitStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+model User {
+  id             String    @id @default(cuid())
+  provider       String
+  providerUserId String
+  email          String?
+  displayName    String
+  avatarUrl      String?
+  timezone       String    @default("UTC")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  sessions       Session[]
+  habits         Habit[]
+
+  @@unique([provider, providerUserId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Habit {
+  id            String                  @id @default(cuid())
+  userId        String
+  user          User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  description   String                  @default("")
+  startDate     String
+  status        HabitStatus             @default(ACTIVE)
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  checkIns      CheckIn[]
+  notifications MilestoneNotification[]
+
+  @@index([userId])
+}
+
+model CheckIn {
+  id        String   @id @default(cuid())
+  habitId   String
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  date      String
+  createdAt DateTime @default(now())
+
+  @@unique([habitId, date])
+}
+
+model MilestoneNotification {
+  id        String    @id @default(cuid())
+  habitId   String
+  habit     Habit     @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  milestone Int
+  sentAt    DateTime  @default(now())
+  ackedAt   DateTime?
+
+  @@unique([habitId, milestone])
+}
