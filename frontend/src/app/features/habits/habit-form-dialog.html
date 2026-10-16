@@ -1,0 +1,81 @@
+<dialog #dialog class="dialog" aria-labelledby="habit-form-title" (cancel)="onCancel($event)">
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <header class="dialog-header">
+      <h2 id="habit-form-title">{{ isEdit() ? 'Edit habit' : 'New habit' }}</h2>
+      <button
+        type="button"
+        class="icon-btn"
+        aria-label="Close"
+        [disabled]="saving()"
+        (click)="close()"
+      >
+        ×
+      </button>
+    </header>
+
+    @if (serverError(); as message) {
+      <p class="alert" role="alert">{{ message }}</p>
+    }
+
+    <div class="field">
+      <label for="habit-name">Name</label>
+      <input
+        id="habit-name"
+        class="input"
+        formControlName="name"
+        autocomplete="off"
+        placeholder="e.g. Read 20 pages"
+        [attr.aria-invalid]="!!errorFor('name')"
+        [attr.aria-describedby]="errorFor('name') ? 'name-error' : null"
+      />
+      @if (errorFor('name'); as message) {
+        <span class="field-error" id="name-error">{{ message }}</span>
+      }
+    </div>
+
+    <div class="field">
+      <label for="habit-description">Description</label>
+      <textarea
+        id="habit-description"
+        class="input"
+        formControlName="description"
+        rows="3"
+        placeholder="Why does this habit matter?"
+        [attr.aria-invalid]="!!errorFor('description')"
+        [attr.aria-describedby]="
+          errorFor('description') ? 'description-hint description-error' : 'description-hint'
+        "
+      ></textarea>
+      <span class="field-hint" id="description-hint"
+        >{{ form.controls.description.value.length }}/500</span
+      >
+      @if (errorFor('description'); as message) {
+        <span class="field-error" id="description-error">{{ message }}</span>
+      }
+    </div>
+
+    <div class="field">
+      <label for="habit-start-date">Start date</label>
+      <input
+        id="habit-start-date"
+        class="input"
+        type="date"
+        formControlName="startDate"
+        [attr.aria-invalid]="!!errorFor('startDate')"
+        [attr.aria-describedby]="errorFor('startDate') ? 'start-date-error' : null"
+      />
+      @if (errorFor('startDate'); as message) {
+        <span class="field-error" id="start-date-error">{{ message }}</span>
+      }
+    </div>
+
+    <footer class="dialog-footer">
+      <button type="button" class="btn btn-ghost" [disabled]="saving()" (click)="close()">
+        Cancel
+      </button>
+      <button type="submit" class="btn btn-primary" [disabled]="saving()">
+        {{ saving() ? 'Saving…' : isEdit() ? 'Save changes' : 'Create habit' }}
+      </button>
+    </footer>
+  </form>
+</dialog>
